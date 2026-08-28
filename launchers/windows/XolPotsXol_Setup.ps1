@@ -33,7 +33,7 @@ $PythonBin = $null
 foreach ($candidate in @("py -3.14", "py -3.13", "py -3.12", "py -3.11", "py", "python")) {
     $parts = $candidate -split " "
     $exe = $parts[0]
-    $exeArgs = $parts[1..($parts.Length - 1)]
+    if ($parts.Length -gt 1) { $exeArgs = $parts[1..($parts.Length - 1)] } else { $exeArgs = @() }
     if (Get-Command $exe -ErrorAction SilentlyContinue) {
         $checkArgs = $exeArgs + @("-c", "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)")
         & $exe @checkArgs 2>$null
