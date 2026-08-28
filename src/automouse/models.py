@@ -290,6 +290,10 @@ class RunContext:
             "machine_arch": self.environment.get("machine_arch", ""),
             "config_path": self.environment.get("config_path", ""),
             "config_sha256": self.environment.get("config_sha256", ""),
+            "translation_script_path": self.environment.get("translation_script_path", ""),
+            "translation_script_sha256": self.environment.get(
+                "translation_script_sha256", ""
+            ),
             "sheets_overlay_enabled": self.environment.get("sheets_overlay_enabled", False),
             "sheets_overlay_fills": self.environment.get("sheets_overlay_fills", []),
             "output_sha256_by_file": self.environment.get("output_sha256_by_file", {}),

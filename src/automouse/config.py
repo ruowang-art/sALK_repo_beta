@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import platform
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,16 +9,38 @@ from typing import Any
 
 from automouse.exceptions import ConfigurationError
 
-# Common install locations for Rscript across the Mac setups this project has
-# actually been run on (Homebrew on Apple Silicon and Intel, the official
-# CRAN installer). Checked only as a fallback when the configured path
-# doesn't already resolve to a real file — an explicit `r.executable` in
-# config always wins.
-_COMMON_R_EXECUTABLE_LOCATIONS = (
-    Path("/usr/local/bin/Rscript"),
-    Path("/opt/homebrew/bin/Rscript"),
-    Path("/Library/Frameworks/R.framework/Resources/bin/Rscript"),
-)
+
+def _common_r_executable_locations() -> tuple[Path, ...]:
+    """Common install locations for Rscript, checked only as a fallback when
+    the configured path doesn't already resolve to a real file — an explicit
+    `r.executable` in config always wins. macOS locations are verified from
+    this project's own actual setups (Homebrew on Apple Silicon and Intel,
+    the official CRAN installer); Windows/Linux locations are the
+    conventional install paths for the official R installers on those
+    platforms, not yet verified against a real Windows/Linux R install
+    (Phase 3/4 — see docs/MACOS_EXECUTABLE_PLAN.md and the portability
+    progress log).
+    """
+    system = platform.system()
+    if system == "Windows":
+        candidates: list[Path] = []
+        program_files_r = Path(r"C:\Program Files\R")
+        if program_files_r.is_dir():
+            for version_dir in sorted(program_files_r.iterdir(), reverse=True):
+                candidates.append(version_dir / "bin" / "Rscript.exe")
+        return tuple(candidates)
+    if system == "Linux":
+        return (
+            Path("/usr/bin/Rscript"),
+            Path("/usr/local/bin/Rscript"),
+        )
+    # Darwin (macOS) and any other/unknown platform default to the macOS set,
+    # matching this project's only currently-verified environment.
+    return (
+        Path("/usr/local/bin/Rscript"),
+        Path("/opt/homebrew/bin/Rscript"),
+        Path("/Library/Frameworks/R.framework/Resources/bin/Rscript"),
+    )
 
 
 def _resolve_r_executable(value: str, project_root: Path) -> Path:
@@ -34,7 +57,7 @@ def _resolve_r_executable(value: str, project_root: Path) -> Path:
     if found:
         return Path(found).resolve()
 
-    for candidate in _COMMON_R_EXECUTABLE_LOCATIONS:
+    for candidate in _common_r_executable_locations():
         if candidate.is_file():
             return candidate
 
@@ -366,11 +389,17 @@ def load_config(path: Path) -> AppConfig:
 def validate_config(config: AppConfig) -> None:
     errors: list[str] = []
     if not config.r.executable.is_file():
+        system = platform.system()
+        install_url = {
+            "Windows": "https://cran.r-project.org/bin/windows/base/",
+            "Linux": "https://cran.r-project.org/bin/linux/",
+        }.get(system, "https://cran.r-project.org/bin/macosx/")
+        find_command = "where Rscript" if system == "Windows" else "which Rscript"
         errors.append(
             f"R executable not found: {config.r.executable} (also checked PATH and "
-            f"{', '.join(str(p) for p in _COMMON_R_EXECUTABLE_LOCATIONS)}). "
-            "Install R from https://cran.r-project.org/bin/macosx/, or set r.executable "
-            "in your config to the exact Rscript path (run `which Rscript` to find it)."
+            f"{', '.join(str(p) for p in _common_r_executable_locations())}). "
+            f"Install R from {install_url}, or set r.executable in your config to the "
+            f"exact Rscript path (run `{find_command}` to find it)."
         )
     if not config.r.translation_script.is_file():
         errors.append(f"R translation script not found: {config.r.translation_script}")

@@ -193,6 +193,19 @@ def _build_run_environment(config: AppConfig) -> dict[str, object]:
             environment["config_sha256"] = calculate_sha256(config.config_path)
         except OSError:
             environment["config_sha256"] = ""
+
+    # The R translation script is external to this repo (see CLAUDE.md) and has
+    # no version/commit/release identity of its own. Recording its exact
+    # content hash per run is the narrowest possible fix for that gap: it
+    # can't tell you *which* release ran, but it can prove whether two runs
+    # (or two machines) used byte-identical translation logic.
+    environment["translation_script_path"] = str(config.r.translation_script)
+    try:
+        environment["translation_script_sha256"] = calculate_sha256(
+            config.r.translation_script
+        )
+    except OSError:
+        environment["translation_script_sha256"] = ""
     return environment
 
 

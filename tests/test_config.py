@@ -4,6 +4,7 @@ import csv
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from automouse.config import (
     AppConfig,
@@ -12,6 +13,8 @@ from automouse.config import (
     SheetsOverlayConfig,
     TransnetyxConfig,
     TranslationConfig,
+    _common_r_executable_locations,
+    _resolve_r_executable,
     validate_config,
 )
 from automouse.exceptions import ConfigurationError
@@ -156,6 +159,65 @@ class SheetsOverlayConfigTests(unittest.TestCase):
                 ),
             )
             validate_config(config)
+
+
+class CrossPlatformRExecutableDiscoveryTests(unittest.TestCase):
+    """Phase 3 (cross-platform launchers): the R-executable fallback logic
+    must resolve sensible candidate paths per OS. These are pure-function
+    checks of the resolution logic itself — they do NOT prove Rscript is
+    actually reachable on a real Windows/Linux machine (that's Phase 4).
+    """
+
+    def test_macos_locations_are_absolute_and_named_rscript(self) -> None:
+        with patch("automouse.config.platform.system", return_value="Darwin"):
+            locations = _common_r_executable_locations()
+        self.assertTrue(locations)
+        for location in locations:
+            self.assertTrue(location.is_absolute())
+            self.assertEqual(location.name, "Rscript")
+
+    def test_linux_locations_are_absolute_and_named_rscript(self) -> None:
+        with patch("automouse.config.platform.system", return_value="Linux"):
+            locations = _common_r_executable_locations()
+        self.assertTrue(locations)
+        for location in locations:
+            self.assertTrue(location.is_absolute())
+            self.assertEqual(location.name, "Rscript")
+
+    def test_windows_locations_end_in_rscript_exe(self) -> None:
+        with patch("automouse.config.platform.system", return_value="Windows"), patch(
+            "automouse.config.Path.is_dir", return_value=False
+        ):
+            locations = _common_r_executable_locations()
+        # No "C:\Program Files\R" directory in this test environment, so the
+        # candidate list is legitimately empty rather than guessed at.
+        self.assertEqual(locations, ())
+
+    def test_resolve_r_executable_prefers_an_already_correct_configured_path(self) -> None:
+        # The one invariant that must hold on every platform: an explicit,
+        # already-valid r.executable in config always wins over any
+        # fallback discovery, macOS/Linux/Windows alike.
+        with tempfile.TemporaryDirectory() as directory_name:
+            root = Path(directory_name)
+            real_rscript = root / "Rscript"
+            real_rscript.write_text("fixture", encoding="utf-8")
+            for system_name in ("Darwin", "Linux", "Windows"):
+                with patch("automouse.config.platform.system", return_value=system_name):
+                    resolved = _resolve_r_executable(str(real_rscript), root)
+                self.assertEqual(resolved, real_rscript.resolve())
+
+    def test_resolve_r_executable_falls_back_to_path_on_every_platform(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            root = Path(directory_name)
+            fake_rscript = root / "Rscript"
+            fake_rscript.write_text("fixture", encoding="utf-8")
+            for system_name in ("Darwin", "Linux", "Windows"):
+                with patch("automouse.config.platform.system", return_value=system_name), patch(
+                    "automouse.config.shutil.which",
+                    side_effect=lambda name, _p=fake_rscript: str(_p) if name == "Rscript" else None,
+                ):
+                    resolved = _resolve_r_executable("Rscript", root)
+                self.assertEqual(resolved, fake_rscript.resolve())
 
 
 if __name__ == "__main__":

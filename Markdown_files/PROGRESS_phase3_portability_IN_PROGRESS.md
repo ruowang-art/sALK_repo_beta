@@ -1,6 +1,6 @@
 # Möuseley Kräs & Xol-Pots-Xol — Progress Log
 
-**Status: Phase 1 and Phase 2 implemented, verified, and committed (macOS/Python 3.11–3.14). Phase 3 (cross-platform launchers) and Phase 4 (actual Windows/Linux verification) not yet started.**
+**Status: Phase 1 and Phase 2 implemented, verified, and committed (macOS/Python 3.11–3.14). Phase 3 (cross-platform launchers) implemented — Linux scripts smoke-tested via bash on macOS, Windows PowerShell scripts written but not executed at all — not yet committed. Phase 4 (real Windows/Linux/CI verification) not started.**
 
 This is a running progress log for two related-but-independent local tools:
 
@@ -254,11 +254,71 @@ and the existing behavior already surfaces the distinction rather than hiding it
 
 ---
 
+## Phase 3 — cross-platform launchers (implemented, awaiting commit)
+
+Scope was set explicitly per both codex's and copilot's Phase 3 recommendations: Windows
+PowerShell launchers, Linux shell launchers, platform-neutral path/Rscript-override handling,
+launcher smoke tests that never touch laboratory data, and explicitly preserving the macOS
+workflow unchanged — with no claim of Windows/Linux support until Phase 4's real verification.
+
+### What was built
+
+- `launchers/linux/*.sh` (5 scripts: `AutoMouse_Setup.sh`, `AutoMouse_Run.sh`,
+  `AutoMouse_WebApp.sh`, `XolPotsXol_Setup.sh`, `XolPotsXol_WebApp.sh`) — same step order and
+  logic as the macOS `.command` scripts, with macOS-only parts (AppleScript picker, `chflags`,
+  Homebrew/Framework R paths) removed rather than superficially translated. The macOS file picker
+  is replaced with a dependency-free numbered-list terminal picker.
+- `launchers/windows/*.ps1` (the same 5, as PowerShell) — same logic, using
+  `.venv\Scripts\python.exe`, a `py -3.x`/`python` launcher search, and a native
+  `System.Windows.Forms.OpenFileDialog` multi-select picker in place of AppleScript.
+- `config.py`'s R-executable discovery (`_common_r_executable_locations`) now branches on
+  `platform.system()`: macOS keeps its existing Homebrew/Framework/`/usr/local/bin` candidates,
+  Linux checks `/usr/bin` and `/usr/local/bin`, Windows enumerates versioned
+  `C:\Program Files\R\R-x.y.z\bin\Rscript.exe` directories. The one invariant proven to hold on
+  every platform (via a new pure-function test, not a real OS): an explicit, already-valid
+  `r.executable` in config always wins over any fallback.
+- `validate_config`'s R-not-found error message is now platform-aware (points at the right CRAN
+  download page and the right "find it" command — `which` vs. `where`).
+- 5 new tests in `tests/test_config.py` covering the discovery logic's per-platform behavior and
+  the configured-path-always-wins invariant across all three platforms (mocked, not real OSes).
+
+### What was actually verified vs. only implemented — kept strictly separate, per both reviews
+
+- **Linux scripts**: smoke-tested for real, on this Mac, via `bash` — a reasonable syntax/logic
+  proxy for a POSIX shell, but explicitly *not* the same as running on an actual Linux
+  distribution. Verified: syntax (`bash -n` on all 5), a full `AutoMouse_Setup.sh` run (pinned
+  install, editable install, direct command, full 83-test suite — all passed), a full
+  `XolPotsXol_Setup.sh` run (same, 34-test suite passed), `AutoMouse_Run.sh`'s input-validation
+  paths (missing file, wrong extension, no-TTY-no-args) without ever reaching the real pipeline
+  call, the numbered-picker's file-discovery logic in isolation, and both web-app launchers
+  actually starting a real local Flask server (GET-only, immediately killed after ~3 seconds,
+  never touching production data or writing anything).
+- **Windows scripts**: written but genuinely **not executed at all** — no PowerShell interpreter
+  (`pwsh`) was available in this session's environment. These are implementation only, explicitly
+  labeled as such in both the scripts' own header comments and `Markdown_files/README.md`. Nothing
+  in this project claims otherwise.
+- While testing the Linux launchers, the macOS hidden-`.pth`-flag issue recurred yet again (the
+  fifth time this session) — purely an artifact of testing *on this Mac*, not a defect in the
+  Linux scripts themselves. Fixed with the same `scripts/fix_hidden_venv.sh`, as expected; this is
+  now a well-understood, recurring nuisance specific to this development machine, not a new
+  finding.
+
+### What was deliberately kept out of Phase 3
+
+- No claim that Windows or Linux are "supported" — the README's new section header says
+  "implemented, not yet verified" explicitly, matching both reviews' instruction not to conflate
+  Phase 3 with Phase 4.
+- `scripts/fix_hidden_venv.sh` / `chflags -R nohidden` were not generalized or ported — they stay
+  macOS-only, since there's no known equivalent issue on the other platforms.
+- No change to the two-portal behavior, no widened data access, no new laboratory-data touchpoints
+  — the new launchers call the exact same CLI entry points the macOS ones already call.
+- No CI setup yet (that's explicitly Phase 4's job, and needs the git repo this session already
+  established).
+
+---
+
 ## What's next (not started yet)
 
-- **Phase 3 — cross-platform launchers**: Windows (PowerShell) and Linux (shell) equivalents of
-  the current macOS-only `.command` launchers, plus a documented non-interactive CLI path for
-  automation.
 - **Phase 4 — actual cross-platform verification**: this is the part that can't be done solo
   from this Mac — real Windows/Linux testing needs either physical/VM access or CI (e.g. GitHub
   Actions), which in turn depends on the git repo that now exists. Not started.
@@ -279,8 +339,31 @@ and the existing behavior already surfaces the distinction rather than hiding it
   work.
 - [x] Phase 2 committed as one reviewable checkpoint.
 
+## Follow-up: materializing the two review documents' feedback
+
+Two more review passes (`REVIEW_full_session_report_feedback.md`,
+`REVIEW_codex_feedback_and_claude_session_synthesis.md`) reviewed the full-session report itself
+rather than the code, and were addressed by editing that report directly (support-boundary notice,
+release-readiness table/checklist, exact provenance — see
+`REPORT_full_session_progress_and_methodology.md`). One item from those reviews was a real,
+implementable code change rather than a documentation fix, and was materialized directly: every
+run manifest now records `translation_script_path` and `translation_script_sha256` (verified
+against the real production config, via `_build_run_environment` in `app.py`, threaded through
+`models.py`'s `to_summary()`). This partially closes the external-R-script-identity gap — it
+proves whether two runs used byte-identical script content — but does not give the script an
+actual version/commit identity, which remains the one open decision below.
+
+(While making this change, the macOS hidden-`.pth`-flag issue recurred a fourth time — same
+symptom, same `scripts/fix_hidden_venv.sh` fix. It's now a known, recurring nuisance on this
+particular Mac tied to pip-adjacent file writes; each recurrence has been caught by the test
+suite failing loudly, never silently.)
+
 ## Open decisions waiting on you
 
-1. Decide whether/how to identify the external R translation script by version or checksum — the
-   one remaining gap from the Phase 2 reviews that's a real design decision, not a bug fix.
-2. Say when to start Phase 3, or whether to adjust the phase plan.
+1. Decide whether/how to give the external R translation script an actual version or Git-commit
+   identity (a checksum is now recorded automatically; the script itself is still unversioned) —
+   the one remaining gap from the Phase 2 reviews that's a real design decision, not a bug fix.
+2. Review and commit Phase 3 (currently implemented, smoke-tested where possible, but
+   uncommitted).
+3. Decide how/when to pursue Phase 4 (real Windows/Linux machines or CI) — this session cannot do
+   that verification unassisted.

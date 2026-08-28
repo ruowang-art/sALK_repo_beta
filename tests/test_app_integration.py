@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import csv
+import hashlib
 import sys
 import tempfile
 import types
@@ -722,6 +723,10 @@ class AppIntegrationTests(unittest.TestCase):
             self.assertEqual(summary["application_version"], "test")
             self.assertEqual(summary["python_version"], sys.version.split()[0])
             self.assertIn("translated_output_file", summary["output_sha256_by_file"])
+            self.assertEqual(
+                summary["translation_script_sha256"],
+                hashlib.sha256(config.r.translation_script.read_bytes()).hexdigest(),
+            )
 
     def test_sheets_overlay_fetch_failure_warns_and_still_completes(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:

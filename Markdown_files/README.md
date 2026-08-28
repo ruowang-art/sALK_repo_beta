@@ -18,6 +18,29 @@ Requirements:
 - Rscript;
 - R packages `dplyr` and `purrr`.
 
+## Windows and Linux (implemented, not yet verified)
+
+`launchers/windows/*.ps1` and `launchers/linux/*.sh` are PowerShell/shell equivalents of the
+`.command` launchers above (Setup, Run, WebApp, for both this project and Xol-Pots-Xol). **Current
+support boundary**: the Linux scripts have been smoke-tested via `bash` on macOS (a reasonable
+syntax/logic proxy, not a real Linux machine); the Windows PowerShell scripts have not been
+executed at all — no PowerShell interpreter was available in the environment that wrote them.
+Neither platform has real-machine or CI verification yet (that's Phase 4). Do not treat "the
+scripts exist" as "Windows/Linux are supported" — treat it as "the macOS-specific parts have been
+identified and separated out, ready for that verification."
+
+What's platform-neutral vs. macOS-specific:
+- Dependency install, the lock-file reconciliation logic, the editable install, and R-executable
+  discovery (`config.py` now branches on `platform.system()` for common Rscript install locations)
+  are shared logic, unchanged in intent across all three platforms.
+- `scripts/fix_hidden_venv.sh` and the `chflags -R nohidden .venv` step remain **macOS-only** —
+  they address a macOS-specific file-flag interaction with Python 3.14's `site.py` (see the
+  portability progress log) and are deliberately not present in the Windows/Linux launchers.
+- The macOS AppleScript multi-file picker in `AutoMouse_Run.command` is replaced by a
+  `System.Windows.Forms.OpenFileDialog` on Windows and a numbered-list terminal picker on Linux
+  (no extra GUI-toolkit dependency assumed); passing file paths as command-line arguments works
+  identically on every platform.
+
 ## Dependency locks
 
 `requirements.lock.txt` (generated with `pip-tools` using the oldest supported Python, 3.11, as
