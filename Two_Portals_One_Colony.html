@@ -1,0 +1,977 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Two Portals, One Colony</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Work+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<style>
+  @page { size: Letter; margin: 0.6in; }
+  @media print {
+    body { background: #ffffff !important; }
+    section + section { break-inside: avoid-page; }
+    .diagram-frame, .status-panel, .relationship-diagram { break-inside: avoid; }
+  }
+  :root {
+    --bg: #eef1ef;
+    --surface: #ffffff;
+    --surface-alt: #e2eae7;
+    --ink: #172420;
+    --ink-muted: #55655f;
+    --ink-faint: #8a9a93;
+    --border: #cddad4;
+    --border-strong: #aebfb7;
+
+    --mk: #2b6f68;
+    --mk-ink: #1d4d47;
+    --mk-soft: #e0ede9;
+    --mk-line: #b7d4cc;
+
+    --xpx: #6d4a90;
+    --xpx-ink: #4d3468;
+    --xpx-soft: #ece3f3;
+    --xpx-line: #d3c1e5;
+
+    --ok: #2f7a4f;
+    --ok-soft: #e2f0e6;
+    --warn: #a3661a;
+    --warn-soft: #f5ead9;
+
+    --code-bg: #e2eae7;
+    --code-text: #2c3b36;
+    --shadow: 0 1px 2px rgba(20, 35, 30, 0.05), 0 10px 28px rgba(20, 35, 30, 0.07);
+
+    --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+    --font-body: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101613;
+      --surface: #161d19;
+      --surface-alt: #1c2521;
+      --ink: #e6ece9;
+      --ink-muted: #9fb0a8;
+      --ink-faint: #647069;
+      --border: #2a3631;
+      --border-strong: #3a4a43;
+
+      --mk: #7fc9be;
+      --mk-ink: #bfe6dd;
+      --mk-soft: #16302c;
+      --mk-line: #285249;
+
+      --xpx: #c6a3e8;
+      --xpx-ink: #ddc4f2;
+      --xpx-soft: #2a2035;
+      --xpx-line: #443358;
+
+      --ok: #6fbf8f;
+      --ok-soft: #16301f;
+      --warn: #e0a758;
+      --warn-soft: #32270f;
+
+      --code-bg: #1c2521;
+      --code-text: #cfe0da;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101613;
+    --surface: #161d19;
+    --surface-alt: #1c2521;
+    --ink: #e6ece9;
+    --ink-muted: #9fb0a8;
+    --ink-faint: #647069;
+    --border: #2a3631;
+    --border-strong: #3a4a43;
+
+    --mk: #7fc9be;
+    --mk-ink: #bfe6dd;
+    --mk-soft: #16302c;
+    --mk-line: #285249;
+
+    --xpx: #c6a3e8;
+    --xpx-ink: #ddc4f2;
+    --xpx-soft: #2a2035;
+    --xpx-line: #443358;
+
+    --ok: #6fbf8f;
+    --ok-soft: #16301f;
+    --warn: #e0a758;
+    --warn-soft: #32270f;
+
+    --code-bg: #1c2521;
+    --code-text: #cfe0da;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  a { color: inherit; }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  p { margin: 0; }
+
+  code, .mono {
+    font-family: var(--font-mono);
+  }
+
+  /* ---------- header / masthead ---------- */
+
+  .masthead {
+    border-bottom: 1px solid var(--border);
+    background:
+      linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+  }
+
+  .masthead-inner {
+    padding: 64px 0 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--border-strong);
+    display: inline-block;
+  }
+
+  h1.title {
+    font-size: clamp(34px, 5.4vw, 52px);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    max-width: 62ch;
+    font-size: 18px;
+    color: var(--ink-muted);
+    line-height: 1.65;
+  }
+
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* decode strip: a small, tasteful animated moment showing the actual
+     mechanism this system exists for - a raw probe call resolving into a
+     genotype string. Respects prefers-reduced-motion. */
+  .decode {
+    margin-top: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    width: fit-content;
+  }
+
+  .decode .raw { color: var(--ink-faint); }
+  .decode .arrow { color: var(--border-strong); }
+  .decode .out {
+    color: var(--mk);
+    min-width: 8ch;
+    display: inline-block;
+  }
+
+  .decode .out::after {
+    content: "";
+  }
+
+  @keyframes decode-cycle {
+    0%, 40%   { content: "PEND"; }
+  }
+
+  .decode-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: var(--mk);
+    animation: blink 1s steps(1) infinite;
+    vertical-align: -2px;
+  }
+
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .decode-cursor { animation: none; opacity: 1; }
+  }
+
+  /* ---------- system relationship ---------- */
+
+  section { padding: 56px 0; }
+  section + section { border-top: 1px solid var(--border); }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .section-head h2 { font-size: 26px; }
+
+  .section-tag {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .relationship-copy {
+    max-width: 66ch;
+    color: var(--ink-muted);
+    margin-bottom: 28px;
+  }
+
+  .relationship-diagram {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+
+  .node {
+    padding: 14px 16px;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .node .node-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    opacity: 0.75;
+  }
+
+  .node.ext { background: var(--surface-alt); border: 1px dashed var(--border-strong); color: var(--ink-muted); }
+  .node.mk { background: var(--mk-soft); border: 1px solid var(--mk-line); color: var(--mk-ink); }
+  .node.xpx { background: var(--xpx-soft); border: 1px solid var(--xpx-line); color: var(--xpx-ink); }
+
+  .rel-arrow {
+    font-family: var(--font-mono);
+    color: var(--ink-faint);
+    font-size: 20px;
+    text-align: center;
+  }
+
+  @media (max-width: 700px) {
+    .relationship-diagram { grid-template-columns: 1fr; }
+    .rel-arrow { transform: rotate(90deg); }
+  }
+
+  /* ---------- dossier (per-project) sections ---------- */
+
+  .dossier { }
+
+  .dossier-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+
+  .stage-tag {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .stage-tag.mk { background: var(--mk-soft); color: var(--mk-ink); }
+  .stage-tag.xpx { background: var(--xpx-soft); color: var(--xpx-ink); }
+
+  .dossier h2 { font-size: 30px; }
+  .dossier h2 .role {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 15px;
+    color: var(--ink-muted);
+    margin-top: 6px;
+  }
+
+  .dossier-purpose {
+    margin-top: 18px;
+    max-width: 68ch;
+    color: var(--ink-muted);
+    font-size: 16px;
+  }
+
+  .dossier-purpose strong { color: var(--ink); font-weight: 600; }
+
+  h3.sub {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 40px 0 18px;
+  }
+
+  .ledger {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ledger-item {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 18px;
+    padding: 18px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .ledger-item:last-child { border-bottom: 1px solid var(--border); }
+
+  .ledger-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding-top: 2px;
+  }
+
+  .ledger-item h4 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15.5px;
+    margin: 0 0 5px;
+  }
+
+  .ledger-item p {
+    color: var(--ink-muted);
+    font-size: 15px;
+    max-width: 64ch;
+  }
+
+  .dossier.mk .ledger-item h4 { color: var(--mk-ink); }
+  .dossier.xpx .ledger-item h4 { color: var(--xpx-ink); }
+
+  :root[data-theme="light"] .dossier.mk .ledger-item h4,
+  body:not([data-theme]) .dossier.mk .ledger-item h4 { }
+
+  /* diagrams */
+  .diagram-frame {
+    margin-top: 8px;
+    padding: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+
+  .diagram-frame pre.mermaid { margin: 0; }
+
+  .diagram-caption {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: 10px;
+  }
+
+  /* ---------- comparison ledger ---------- */
+
+  table.compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+
+  table.compare th, table.compare td {
+    text-align: left;
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  table.compare thead th {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-top: none;
+    border-bottom: 2px solid var(--border-strong);
+    font-weight: 500;
+  }
+
+  table.compare td:first-child, table.compare th:first-child {
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  table.compare td.mk-cell { color: var(--mk-ink); }
+  table.compare td.xpx-cell { color: var(--xpx-ink); }
+
+  .table-scroll { overflow-x: auto; }
+
+  /* ---------- status panel (run-summary styled) ---------- */
+
+  .status-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .status-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-alt);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .phase-rows { padding: 6px 20px; }
+
+  .phase-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .phase-row:first-child { border-top: none; }
+
+  .phase-id {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  .phase-desc { font-size: 14.5px; color: var(--ink); }
+  .phase-desc span { display: block; font-size: 12.5px; color: var(--ink-muted); margin-top: 2px; }
+
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .pill.done { background: var(--ok-soft); color: var(--ok); }
+  .pill.partial { background: var(--warn-soft); color: var(--warn); }
+  .pill.pending { background: var(--surface-alt); color: var(--ink-faint); border: 1px dashed var(--border-strong); }
+
+  .platform-table {
+    margin-top: 20px;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .platform-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  @media (max-width: 640px) {
+    .platform-grid { grid-template-columns: 1fr; }
+  }
+
+  .platform-card {
+    padding: 14px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  .platform-card .plat-name {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .platform-card .plat-status {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .platform-card .plat-note {
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  .plat-verified { color: var(--ok); }
+  .plat-partial { color: var(--warn); }
+  .plat-none { color: var(--ink-faint); }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    padding: 40px 0 64px;
+  }
+
+  .foot-note {
+    font-size: 13.5px;
+    color: var(--ink-faint);
+    max-width: 66ch;
+    line-height: 1.7;
+  }
+
+  .foot-note + .foot-note { margin-top: 10px; }
+</style>
+
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <div class="eyebrow">Local colony-management software</div>
+    <h1 class="title">Two Portals, One Colony</h1>
+    <p class="lede">
+      <strong>Möuseley Kräs</strong> turns a manually downloaded genotyping export into a reconciled
+      mouse inventory, an audit trail, and printable cage cards. <strong>Xol-Pots-Xol</strong> takes
+      the sparse cage-card workbooks that produces and consolidates them into fuller ones. Two small,
+      separately-owned tools, one shared job: keep a mouse colony's paperwork honest.
+    </p>
+    <div class="decode" aria-hidden="false">
+      <span class="raw">3xtg_probe_09/HET/CALL_OK</span>
+      <span class="arrow">→</span>
+      <span class="out">K/+<span class="decode-cursor"></span></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="relationship">
+    <div class="section-head">
+      <h2>How the two fit together</h2>
+      <span class="section-tag">System relationship</span>
+    </div>
+    <p class="relationship-copy">
+      The relationship is one-way. Möuseley Kräs is the only producer of cage-card workbooks in this
+      system; Xol-Pots-Xol is a pure downstream consumer. It never reads Möuseley Kräs's inventory,
+      its raw genotyping files, or its source code, and never writes back into Möuseley Kräs's
+      template — it only ever reads finished workbooks and writes a brand-new one.
+    </p>
+    <div class="relationship-diagram">
+      <div class="node ext">
+        <span class="node-label">External vendor</span>
+        Genotyping CSV export
+      </div>
+      <div class="rel-arrow">→</div>
+      <div class="node mk">
+        <span class="node-label">Stage 1 · Producer</span>
+        Möuseley Kräs
+      </div>
+      <div class="rel-arrow">→</div>
+      <div class="node xpx">
+        <span class="node-label">Stage 2 · Consumer</span>
+        Xol-Pots-Xol
+      </div>
+    </div>
+  </section>
+
+  <section id="mouseley-kras">
+    <div class="dossier mk">
+      <div class="dossier-head">
+        <span class="stage-tag mk">Stage 1 — Producer</span>
+      </div>
+      <h2>Möuseley Kräs<span class="role">Genotyping → inventory → cage cards</span></h2>
+      <p class="dossier-purpose">
+        Möuseley Kräs turns a manually downloaded genotyping-result export into three things: a
+        reconciled copy of the mouse inventory, an audit and exception report explaining exactly
+        what happened to every record it touched, and a cage-card workbook ready to print for the
+        vivarium. A second, independent mode registers brand-new litters into the inventory before
+        they've been genotyped at all. Its defining feature is <strong>safety</strong> — it is built
+        to be trustworthy with irreplaceable colony records, even though it runs as an ordinary local
+        program with no database and no operations team behind it.
+      </p>
+
+      <h3 class="sub">Nine ideas the design leans on</h3>
+      <div class="ledger">
+        <div class="ledger-item">
+          <div class="ledger-num">01</div>
+          <div>
+            <h4>Functional core, imperative shell</h4>
+            <p>The logic that decides what should happen — does a genotype match an approved
+              pattern, do a litter's pup counts add up — is pure and untestable-to-break; the code
+              that touches files, the network, or a subprocess is a thin shell around it.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">02</div>
+          <div>
+            <h4>Configuration as data, not code</h4>
+            <p>Which column holds which field, what an "approved" genotype looks like, which cell
+              on the cage-card template maps to which output — all declarative data in one config
+              file, never hard-coded logic.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">03</div>
+          <div>
+            <h4>Fuzzy-tolerant parsing, zero-tolerance matching</h4>
+            <p>Lenient about finding the right column when a header's casing or punctuation drifts;
+              strict about matching a mouse to a record — always an exact key, never a guess.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">04</div>
+          <div>
+            <h4>Fail-closed, explicit-outcome auditing</h4>
+            <p>Every record gets one status from a closed set — ready, conflict, needs review — with
+              no silent "nothing to report" path. A conflicting genotype is preserved and reported,
+              never overwritten.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">05</div>
+          <div>
+            <h4>Checksum-verified, copy-on-write persistence</h4>
+            <p>Before touching the inventory, it hashes the existing file and takes a verified
+              backup. Updates land on a new copy — never in place on the source.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">06</div>
+          <div>
+            <h4>Idempotency via content hashing</h4>
+            <p>Every input file is hashed and checked against a small index before processing.
+              Re-running the same export twice is caught and blocked by default.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">07</div>
+          <div>
+            <h4>Process isolation across a language boundary</h4>
+            <p>Genotype translation runs in R; orchestration and the web layer run in Python. They
+              talk over a subprocess with an explicit argument list — never a shell string.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">08</div>
+          <div>
+            <h4>Two independent portals, one boundary</h4>
+            <p>Cage Card Production and Mouse Inventory Update share the same safety primitives but
+              are otherwise separate code paths, deliberately kept from blurring into each other.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">09</div>
+          <div>
+            <h4>Least-privilege external integration</h4>
+            <p>The one live external touchpoint — an optional overlay reading two date fields from
+              a shared spreadsheet — is read-only, fills blanks only, and degrades to a warning
+              rather than aborting a run if it can't be reached.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Cage Card Production, step by step</h3>
+      <div class="diagram-frame">
+<pre class="mermaid">
+flowchart TD
+    A["Raw genotyping export\n(manually downloaded)"] --> B["Archive input\n+ duplicate check"]
+    B --> C["Translate probe codes\ninto genotype calls"]
+    C --> D["Validate translated data"]
+    D --> E["Match records to inventory\n(exact ID match only)"]
+    E --> F{"Conflict with\nexisting genotype?"}
+    F -->|yes| G["Flag as conflict\nnever overwritten"]
+    F -->|no| H["Verified backup,\nthen write updated copy"]
+    G --> I["Audit / exception report"]
+    H --> I
+    I --> J["Generate cage-card workbook"]
+</pre>
+      </div>
+      <p class="diagram-caption">One run, one shared identifier, every record accounted for.</p>
+    </div>
+  </section>
+
+  <section id="xol-pots-xol">
+    <div class="dossier xpx">
+      <div class="dossier-head">
+        <span class="stage-tag xpx">Stage 2 — Consumer</span>
+      </div>
+      <h2>Xol-Pots-Xol<span class="role">Sparse cage cards → one fuller workbook</span></h2>
+      <p class="dossier-purpose">
+        Möuseley Kräs produces cage cards one small batch at a time, so a colony ends up with many
+        <em>sparse</em> workbooks — each covering a handful of cages. Xol-Pots-Xol reads a set of
+        those already-produced workbooks and merges compatible entries into fewer, fuller ones,
+        without ever touching Möuseley Kräs's inventory, raw data, or template.
+      </p>
+
+      <h3 class="sub">Six ideas the design leans on</h3>
+      <div class="ledger">
+        <div class="ledger-item">
+          <div class="ledger-num">01</div>
+          <div>
+            <h4>Narrow, explicit coupling</h4>
+            <p>Almost everything it reads is opaque text, copied straight through. The one exception
+              — the genotype locus it needs to group by — lives in one small, named, versioned
+              function, not a general parser trying to understand every possible format.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">02</div>
+          <div>
+            <h4>Fail open to "don't merge," not to a guess</h4>
+            <p>A mouse the tool can't confidently classify goes into an explicit, reasoned-out
+              "unconsolidated" bucket rather than a guessed grouping.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">03</div>
+          <div>
+            <h4>Read, transform, write fresh</h4>
+            <p>It never edits a workbook in place. It reads several sparse ones, builds an in-memory
+              model, and writes one brand-new output — trivially re-runnable, side-effect-free.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">04</div>
+          <div>
+            <h4>Schema as contract</h4>
+            <p>Reads by fixed column position, but only after validating the header row — a
+              stricter contract than Möuseley Kräs's, because its own inputs are far more uniform
+              than a third-party export.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">05</div>
+          <div>
+            <h4>A deterministic consolidation key</h4>
+            <p>Mice are grouped by strain, a normalized genotype-equivalence class, and parentage —
+              two differently-worded genotype strings meaning the same thing collapse to one key.</p>
+          </div>
+        </div>
+        <div class="ledger-item">
+          <div class="ledger-num">06</div>
+          <div>
+            <h4>Separate "done" from "needs a human"</h4>
+            <p>The output always carries four sheets: consolidated cages, unconsolidated mice kept
+              structurally apart, a review list with a named reason per mouse, and a reproducibility
+              report.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Consolidation flow</h3>
+      <div class="diagram-frame">
+<pre class="mermaid">
+flowchart TD
+    A["Several sparse\ncage-card workbooks"] --> B["Validate header row"]
+    B --> C["Read into an\nin-memory mouse model"]
+    C --> D["Build consolidation key:\nstrain + genotype class + parents"]
+    D --> E{"Key\nrecognized?"}
+    E -->|no| F["Unconsolidated + Review Needed\nmouse + reason"]
+    E -->|yes| G["Group matching mice"]
+    G --> H["Write the four-sheet\noutput workbook"]
+    F --> H
+</pre>
+      </div>
+      <p class="diagram-caption">Nothing is merged on a guess; everything unmerged says why.</p>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="section-head">
+      <h2>At a glance</h2>
+      <span class="section-tag">Comparison</span>
+    </div>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Möuseley Kräs</th>
+            <th>Xol-Pots-Xol</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Role</td>
+            <td class="mk-cell">Producer</td>
+            <td class="xpx-cell">Consumer</td>
+          </tr>
+          <tr>
+            <td>Column matching</td>
+            <td>Lenient header resolution, strict identity match</td>
+            <td>Strict header contract, fixed column position</td>
+          </tr>
+          <tr>
+            <td>Domain coupling</td>
+            <td>Deep — genotype validation, inventory matching, cell mapping</td>
+            <td>Shallow, except one narrow, versioned locus rule</td>
+          </tr>
+          <tr>
+            <td>Persistence</td>
+            <td>Checksum-backed copy-on-write</td>
+            <td>Always a brand-new workbook; inputs never mutated</td>
+          </tr>
+          <tr>
+            <td>External integration</td>
+            <td>One opt-in, read-only, audited overlay</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td>Uncertainty handling</td>
+            <td>Explicit per-record audit status</td>
+            <td>Explicit unconsolidated / review sheets with named reasons</td>
+          </tr>
+          <tr>
+            <td>Interfaces</td>
+            <td>Command line + local web app, two portals</td>
+            <td>Command line + local web app, one command</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="status">
+    <div class="section-head">
+      <h2>Where things stand</h2>
+      <span class="section-tag">Run summary</span>
+    </div>
+    <div class="status-panel">
+      <div class="status-panel-head">
+        <span>Portability initiative</span>
+        <span>Updated 2026-08-28</span>
+      </div>
+      <div class="phase-rows">
+        <div class="phase-row">
+          <span class="phase-id">Phase 1</span>
+          <span class="phase-desc">Version control and scoping<span>Established as a real, staged goal</span></span>
+          <span class="pill done">Done</span>
+        </div>
+        <div class="phase-row">
+          <span class="phase-id">Phase 2</span>
+          <span class="phase-desc">Isolated environments, locked dependencies<span>Verified across Python 3.11–3.14</span></span>
+          <span class="pill done">Done</span>
+        </div>
+        <div class="phase-row">
+          <span class="phase-id">Phase 3</span>
+          <span class="phase-desc">Windows and Linux launcher scripts<span>Implemented; Linux proxy-tested, Windows not yet executed</span></span>
+          <span class="pill partial">Partial</span>
+        </div>
+        <div class="phase-row">
+          <span class="phase-id">Phase 4</span>
+          <span class="phase-desc">Verification on real Windows/Linux machines or CI<span>Not started</span></span>
+          <span class="pill pending">Pending</span>
+        </div>
+      </div>
+      <div class="platform-table">
+        <div class="platform-grid">
+          <div class="platform-card">
+            <span class="plat-name">macOS</span>
+            <div class="plat-status plat-verified">Verified</div>
+            <p class="plat-note">The only platform any real run has executed on. Both suites pass in full.</p>
+          </div>
+          <div class="platform-card">
+            <span class="plat-name">Linux</span>
+            <div class="plat-status plat-partial">Proxy-tested</div>
+            <p class="plat-note">Launchers exist and were smoke-tested via a shell on macOS — a reasonable proxy, not a real machine.</p>
+          </div>
+          <div class="platform-card">
+            <span class="plat-name">Windows</span>
+            <div class="plat-status plat-none">Unexecuted</div>
+            <p class="plat-note">Launchers are implemented and inspected, but have never run under a real interpreter.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p class="foot-note">
+    This page describes the design and current status of two local, single-lab tools. It contains no
+    animal records, genotype data, or credentials — it exists to explain how the software works and
+    what it can currently be trusted to do.
+  </p>
+  <p class="foot-note">
+    Both tools run locally, one lab at a time, with no server infrastructure of their own.
+  </p>
+</footer>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>
