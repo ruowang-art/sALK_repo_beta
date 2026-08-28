@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Xol-Pots-Xol — Result{% endblock %}
+{% block content %}
+<h2>Consolidation result</h2>
+
+<div class="panel success" role="status">
+  <p>Review the counts and warnings below before relying on the consolidated workbook.</p>
+</div>
+
+<table class="counts">
+  <caption>What happened</caption>
+  <tbody>
+    <tr><th scope="row">Input cages (across all uploaded workbooks)</th><td>{{ input_cage_count }}</td></tr>
+    <tr><th scope="row">Input mice</th><td>{{ input_mouse_count }}</td></tr>
+    <tr><th scope="row">Consolidated cages produced</th><td>{{ consolidated_cage_count }}</td></tr>
+    <tr><th scope="row">Cages kept as originally grouped (missing required fields)</th><td>{{ preserved_cage_count }}</td></tr>
+  </tbody>
+</table>
+
+{% if warnings %}
+<div class="panel warning" role="alert">
+  <p><strong>Warnings:</strong></p>
+  <ul>
+    {% for warning in warnings %}
+    <li>{{ warning }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<p><a class="button" href="{{ download_url }}">Download consolidated workbook</a></p>
+<p><a href="{{ url_for('index') }}">Consolidate more files</a></p>
+{% endblock %}

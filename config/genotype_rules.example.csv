@@ -1,0 +1,6 @@
+rule_type,value,status,notes
+failure_token,Fail,PENDING_RERUN,R output indicates a failed assay
+failure_token,Undetected,PENDING_RERUN,R output indicates an undetected assay
+failure_token,UD1,PENDING_RERUN,Transnetyx undetected code
+failure_token,UD4,PENDING_RERUN,Transnetyx failed code
+

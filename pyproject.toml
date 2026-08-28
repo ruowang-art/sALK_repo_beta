@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "automouse"
+version = "0.3.1"
+description = "Safe local Transnetyx-to-inventory and cage-card workflow"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+inventory = [
+  "openpyxl>=3.1",
+  "pandas>=2.2",
+]
+webapp = [
+  "Flask>=3.0",
+]
+sheets = [
+  "google-api-python-client>=2.100",
+  "google-auth>=2.23",
+]
+
+[project.scripts]
+automouse = "automouse.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"automouse.web" = ["templates/*.html", "static/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

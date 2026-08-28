@@ -1,0 +1,53 @@
+# --- Python / build artifacts ---
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+xol-pots-xol/.venv/
+xol-pots-xol/src/*.egg-info/
+
+# --- Editors / OS ---
+.vscode/
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/
+
+# --- Unrelated local tooling ---
+node_modules
+
+# --- Real laboratory data & credentials: NEVER commit ---
+# See CLAUDE.md's data-safety rules — these are read-only production files,
+# not test fixtures, and must never enter version control.
+test_mouse_inventory.csv
+scratch_mouse_inventory.csv
+raw transnetyx csv/
+new genotyping r script training/
+example_outputs/
+examples_unzipped/
+20231115_Shaw_Ultraseq_Saturation_Screens*.csv
+current_order_output.csv
+m0useley-kr4s-*.json
+config/pipeline_run.yaml
+# Orphaned pre-pipeline_run.yaml config, still holds a real absolute path.
+config/settings.yaml
+
+# --- Real cage-card templates (large binary assets, not source) ---
+Live_Label_Salk_Cage_Card_Data_Template*.xlsx
+consolidated_cage_cards_*.xlsx
+
+# --- Generated run output / runtime state ---
+outputs/
+runtime/
+xol-pots-xol/runtime/
+AutoMouse_legacy_environments/
+tmp/
+
+# --- Misc scratch / non-source clutter ---
+*.drawio
+*.crswap
+*.rtf
+Translation_Examples.zip
+Trp53_FrtP_debug_fixed.R

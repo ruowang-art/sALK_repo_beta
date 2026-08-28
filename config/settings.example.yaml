@@ -1,0 +1,100 @@
+{
+  "application_version": "0.3.1",
+  "runtime_root": "runtime",
+  "r": {
+    "executable": "/path/to/Rscript",
+    "translation_script": "/path/to/Transnetyx_20260713.R",
+    "wrapper_script": "scripts/transnetyx_cli_wrapper.R",
+    "timeout_seconds": 300,
+    "print_diagnostics": true
+  },
+  "transnetyx": {
+    "sample_id_column": "Sample",
+    "required_columns": ["Sample", "Strain"],
+    "metadata_columns": ["WellPlate", "Strain", "Well", "Sample", "TranslatedResult"],
+    "supported_extensions": [".csv"],
+    "delimiter": ",",
+    "encoding": "utf-8-sig",
+    "require_any_assay_value": true
+  },
+  "translation": {
+    "sample_id_column": "Sample",
+    "genotype_column": "Genotype",
+    "required_columns": ["Sample", "Genotype"],
+    "approved_genotypes": [],
+    "approved_genotype_pattern": "^[A-Za-z0-9_+./;() -]+$",
+    "failure_tokens": ["Fail", "Undetected", "UD1", "UD4"]
+  },
+  "inventory": {
+    "file": "/path/to/master_inventory.csv",
+    "format": "csv",
+    "output_sheet_name": "Mouse Inventory",
+    "source_sheet_url": "https://docs.google.com/spreadsheets/d/your-sheet-id/edit",
+    "columns": {
+      "mouse_id": 1,
+      "label_printed": 2,
+      "note": 3,
+      "strain": 4,
+      "cage_id": 5,
+      "revised_strain": 6,
+      "transnetyx_order_date": 8,
+      "plate_id": 9,
+      "id": 13,
+      "mother": 14,
+      "father": 15,
+      "dob": 16,
+      "sex": 17,
+      "wean_date": 18,
+      "six_weeks": 19,
+      "sample": 20,
+      "genotype": 21,
+      "destination": 43,
+      "notes": 44,
+      "location": 45
+    },
+    "expected_headers": {
+      "mouse_id": "Mouse",
+      "strain": "Strain",
+      "cage_id": "Cage",
+      "revised_strain": "Revised Strain",
+      "id": "ID",
+      "mother": "Mother",
+      "father": "Father",
+      "dob": "DOB",
+      "sex": "Sex",
+      "wean_date": "Wean_By",
+      "sample": "Sample",
+      "genotype": "Genotype"
+    },
+    "identifier_roles": ["mouse_id", "id", "sample"],
+    "audit_column_names": {
+      "last_updated": "AutoMouse Last Updated",
+      "genotype_source": "AutoMouse Genotype Source",
+      "run_id": "AutoMouse Run ID"
+    }
+  },
+  "cage_card": {
+    "template": "/path/to/Live_Label_Salk_Cage_Card_Data_Template.xlsx",
+    "sheet_name": "Sheet1",
+    "max_mice_per_card": 5,
+    "grouping_strategy": "weaning_compatible_cage",
+    "male_dob_window_days": 5,
+    "female_dob_window_days": 7,
+    "experiment_url": "",
+    "generate_for_actions": ["UPDATED", "CONFIRMED"],
+    "expected_headers": [
+      "Experiment URL", "Strain", "# IN CAGE", "# IN LITTER", "SEX",
+      "DATE WEANED", "DATE BORN", "MOUSE 1", "MOUSE 2", "MOUSE 3",
+      "MOUSE 4", "MOUSE 5", "MOUSE 1 GENOTYPE", "MOUSE 2 GENOTYPE",
+      "MOUSE 3 GENOTYPE", "MOUSE 4 GENOTYPE", "MOUSE 5 GENOTYPE",
+      "DAM", "DAM GENOTYPE", "SIRE", "SIRE GENOTYPE", "BREEDER? (B)",
+      "Set up date"
+    ]
+  },
+  "sheets_overlay": {
+    "enabled": false,
+    "spreadsheet_id": "your-sheet-id",
+    "worksheet": "Sheet1",
+    "credentials_file": "/path/to/sheets_service_account.json"
+  }
+}

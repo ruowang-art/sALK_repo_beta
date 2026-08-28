@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Xol-Pots-Xol — Could not complete{% endblock %}
+{% block content %}
+<h2>Xol-Pots-Xol could not complete this request</h2>
+<div class="panel error" role="alert">
+  <p>Error: {{ message }}</p>
+</div>
+<p><a class="button" href="{{ url_for('index') }}">Start over</a></p>
+{% endblock %}

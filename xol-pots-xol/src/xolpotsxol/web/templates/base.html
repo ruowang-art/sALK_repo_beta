@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Xol-Pots-Xol{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="site-header">
+    <h1>Xol-Pots-Xol</h1>
+    <p>
+      Consolidate sparse Live Label cage cards produced by Möuseley Kräs into fuller cages.
+      Runs only on this computer; nothing is uploaded anywhere else.
+    </p>
+  </header>
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>
+      Xol-Pots-Xol never reads from or writes to Möuseley Kräs's inventory, raw Transnetyx files,
+      or cage-card template — its only input is the Live Label workbook(s) you upload here, and its
+      only output is a new workbook built from them.
+    </p>
+  </footer>
+</body>
+</html>

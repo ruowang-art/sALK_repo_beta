@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Möuseley Kräs{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="site-header">
+    <h1>Möuseley Kräs</h1>
+    <p>Local genotype-inventory and cage-card workflow. Runs only on this computer; nothing is uploaded anywhere else.</p>
+    <nav class="portal-nav" aria-label="Portals">
+      <a href="{{ url_for('index') }}">Cage Card Production</a>
+      <a href="{{ url_for('inventory_upload') }}">Mouse Inventory Update</a>
+    </nav>
+    {% if inventory_source_url %}
+    <p>
+      <a href="{{ inventory_source_url }}" target="_blank" rel="noopener noreferrer">
+        Open the primary mouse inventory (Google Sheet) ↗
+      </a>
+      <span class="help-text">Opens in a new tab. Möuseley Kräs does not read from or write to it automatically.</span>
+    </p>
+    {% endif %}
+  </header>
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>Möuseley Kräs never overwrites the original inventory, raw Transnetyx files, or cage-card template. Review the exception report before relying on any updated inventory or cage cards.</p>
+  </footer>
+</body>
+</html>

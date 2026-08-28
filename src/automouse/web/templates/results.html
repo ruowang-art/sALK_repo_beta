@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Möuseley Kräs — Run {{ summary.run_id }}{% endblock %}
+{% block content %}
+<h2>Run {{ summary.run_id }}</h2>
+
+{% if summary.dry_run %}
+<div class="panel warning" role="status">
+  <p>This was a preview (dry run). No updated inventory copy was written.</p>
+</div>
+{% else %}
+<div class="panel success" role="status">
+  <p>Completed. Review the exception report below before relying on the updated inventory or cage cards.</p>
+</div>
+{% endif %}
+
+{% set needs_review = summary.conflict_count + summary.manual_review_count + summary.mouse_not_found_count + summary.multiple_match_count %}
+{% if needs_review > 0 %}
+<div class="panel warning" role="alert">
+  <p>
+    {{ needs_review }} record(s) need manual review (conflicts, mice not found, multiple matches,
+    or otherwise ambiguous results). See the exception workbook below — nothing ambiguous was
+    guessed or overwritten automatically.
+  </p>
+</div>
+{% endif %}
+
+<table class="counts">
+  <caption>What happened in this run</caption>
+  <tbody>
+    <tr><th scope="row">Files processed</th><td>{{ summary.input_file_count }}</td></tr>
+    <tr><th scope="row">Raw records read</th><td>{{ summary.raw_record_count }}</td></tr>
+    <tr><th scope="row">Translated records</th><td>{{ summary.translated_record_count }}</td></tr>
+    <tr><th scope="row">Inventory records updated</th><td>{{ summary.inventory_records_updated }}</td></tr>
+    <tr><th scope="row">Inventory records confirmed (already matched)</th><td>{{ summary.inventory_records_confirmed }}</td></tr>
+    <tr><th scope="row">Mice not found in inventory</th><td>{{ summary.mouse_not_found_count }}</td></tr>
+    <tr><th scope="row">Multiple inventory matches</th><td>{{ summary.multiple_match_count }}</td></tr>
+    <tr><th scope="row">Genotype conflicts (not overwritten)</th><td>{{ summary.conflict_count }}</td></tr>
+    <tr><th scope="row">Sent to manual review</th><td>{{ summary.manual_review_count }}</td></tr>
+    {% if summary.dry_run and summary.proposed_update_count %}
+    <tr><th scope="row">New inventory rows previewed (dry run only)</th><td>{{ summary.proposed_update_count }}</td></tr>
+    {% endif %}
+    <tr><th scope="row">Cages selected for cage cards</th><td>{{ summary.cages_selected }}</td></tr>
+    <tr><th scope="row">Cage cards generated</th><td>{{ summary.cage_cards_generated }}</td></tr>
+  </tbody>
+</table>
+
+{% if summary.warnings %}
+<div class="panel warning">
+  <p><strong>Warnings:</strong></p>
+  <ul>
+    {% for warning in summary.warnings %}
+    <li>{{ warning }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if summary.errors %}
+<div class="panel error" role="alert">
+  <p><strong>Errors:</strong></p>
+  <ul>
+    {% for error in summary.errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<h3>Downloads</h3>
+{% if downloads %}
+<ul class="downloads">
+  {% for item in downloads %}
+  <li><a href="{{ item.url }}">{{ item.label }}</a> <span class="help-text">({{ item.name }})</span></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No output files were produced for this run.</p>
+{% endif %}
+
+<p><a class="button" href="{{ url_for('index') }}">Process more files</a></p>
+{% endblock %}

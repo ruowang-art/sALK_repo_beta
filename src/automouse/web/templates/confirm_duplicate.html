@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Möuseley Kräs — Already processed{% endblock %}
+{% block content %}
+<h2>These files were already processed</h2>
+<div class="panel warning" role="alert">
+  <p>{{ message }}</p>
+</div>
+
+<p>File(s) selected this time:</p>
+<ul>
+  {% for name in file_names %}
+  <li>{{ name }}</li>
+  {% endfor %}
+</ul>
+
+<p>
+  Only continue if this is an intentional retry — for example, an earlier run was known to be
+  wrong, or this is a corrected re-download. Otherwise, choose "Do not re-run" and confirm nothing
+  needs to change.
+</p>
+
+<div class="actions">
+  <form method="post" action="{{ url_for('confirm') }}">
+    <input type="hidden" name="token" value="{{ token }}">
+    <button type="submit">Re-run anyway</button>
+  </form>
+  <form method="post" action="{{ url_for('cancel') }}">
+    <input type="hidden" name="token" value="{{ token }}">
+    <button type="submit" class="secondary">Do not re-run</button>
+  </form>
+</div>
+{% endblock %}

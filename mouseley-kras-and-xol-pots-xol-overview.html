@@ -1,0 +1,875 @@
+<title>Two Portals, One Colony</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #f5f6f9;
+    --surface: #ffffff;
+    --surface-alt: #eef1f6;
+    --text: #1b2430;
+    --text-muted: #5b6675;
+    --border: #dfe3ea;
+    --accent-mk: #1d5b8f;
+    --accent-mk-soft: #e6eef6;
+    --accent-xpx: #7a4db8;
+    --accent-xpx-soft: #f1eafa;
+    --code-bg: #eef1f6;
+    --code-text: #33405a;
+    --shadow: 0 1px 2px rgba(20, 30, 50, 0.04), 0 8px 24px rgba(20, 30, 50, 0.05);
+
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-body: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b;
+      --surface: #181c24;
+      --surface-alt: #1f2430;
+      --text: #e7eaef;
+      --text-muted: #9aa4b5;
+      --border: #2a2f3a;
+      --accent-mk: #6ba7dd;
+      --accent-mk-soft: #1a2a3b;
+      --accent-xpx: #bd97e8;
+      --accent-xpx-soft: #271f34;
+      --code-bg: #1b2029;
+      --code-text: #cbd4e6;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12151b;
+    --surface: #181c24;
+    --surface-alt: #1f2430;
+    --text: #e7eaef;
+    --text-muted: #9aa4b5;
+    --border: #2a2f3a;
+    --accent-mk: #6ba7dd;
+    --accent-mk-soft: #1a2a3b;
+    --accent-xpx: #bd97e8;
+    --accent-xpx-soft: #271f34;
+    --code-bg: #1b2029;
+    --code-text: #cbd4e6;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--accent-mk-soft); }
+
+  a { color: var(--accent-mk); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent-mk);
+    outline-offset: 2px;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    gap: 0;
+    max-width: 78rem;
+    margin: 0 auto;
+  }
+
+  /* ---------- sidebar ---------- */
+
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 2.25rem 1.5rem 2rem 2rem;
+    border-right: 1px solid var(--border);
+  }
+
+  .toc-mark {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+  }
+
+  .toc nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .toc a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    display: block;
+  }
+  .toc a:hover { color: var(--text); background: var(--surface-alt); }
+
+  .toc .group-label {
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 1rem;
+    padding: 0.3rem 0.5rem 0.15rem;
+  }
+  .toc .group-label:first-child { margin-top: 0; }
+  .toc .indent { padding-left: 1.25rem; font-size: 0.83rem; }
+
+  .toc-dot-mk::before, .toc-dot-xpx::before {
+    content: "";
+    display: inline-block;
+    width: 0.5rem; height: 0.5rem;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  .toc-dot-mk::before { background: var(--accent-mk); }
+  .toc-dot-xpx::before { background: var(--accent-xpx); }
+
+  #nav-toggle { display: none; }
+  .toc-toggle-label { display: none; }
+
+  /* ---------- main content ---------- */
+
+  main { padding: 3rem 3rem 6rem; min-width: 0; }
+
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem;
+  }
+
+  h1.title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2rem, 1.6rem + 1.6vw, 2.75rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.9rem;
+    text-wrap: balance;
+  }
+
+  .deck {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 42rem;
+    margin: 0 0 2.5rem;
+  }
+
+  .hero-diagram-wrap { margin-bottom: 3.5rem; }
+
+  section { margin-bottom: 4.5rem; }
+  section > h2:first-of-type { margin-top: 0; }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.85rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .section-head .badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge-mk { background: var(--accent-mk-soft); color: var(--accent-mk); }
+  .badge-xpx { background: var(--accent-xpx-soft); color: var(--accent-xpx); }
+
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.65rem;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin: 0 0 0.75rem;
+  }
+
+  p { max-width: 44rem; }
+  p.wide { max-width: none; }
+
+  .lede {
+    font-size: 1.05rem;
+    color: var(--text);
+    max-width: 44rem;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.87em;
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+
+  /* ---------- concept cards ---------- */
+
+  .concepts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    gap: 1rem;
+    margin: 1.75rem 0;
+  }
+
+  .concept {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.15rem 1.25rem 1.3rem;
+    box-shadow: var(--shadow);
+  }
+
+  .concept-mk { border-top: 3px solid var(--accent-mk); }
+  .concept-xpx { border-top: 3px solid var(--accent-xpx); }
+
+  .concept-num {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .concept h4 {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.98rem;
+    margin: 0 0 0.45rem;
+  }
+
+  .concept p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0;
+    max-width: none;
+  }
+
+  /* ---------- diagram panels ---------- */
+
+  .diagram-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin: 1.75rem 0 0.6rem;
+  }
+
+  .diagram-scroll {
+    overflow-x: auto;
+  }
+
+  .diagram-caption {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0.75rem 0 0;
+  }
+  .diagram-caption .swatch {
+    display: inline-block;
+    width: 0.6rem; height: 0.6rem;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+  }
+
+  /* ---------- table ---------- */
+
+  .table-scroll { overflow-x: auto; margin: 1.5rem 0; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 48rem;
+    font-size: 0.92rem;
+  }
+
+  thead th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody th {
+    text-align: left;
+    padding: 0.85rem 1rem 0.85rem 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    white-space: nowrap;
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td, tbody tr:last-child th { border-bottom: none; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    .toc {
+      position: static;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+    }
+    .toc nav { display: none; }
+    #nav-toggle:checked ~ nav { display: flex; }
+    .toc-toggle-label {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-mk);
+      cursor: pointer;
+    }
+    main { padding: 2rem 1.25rem 4rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+  <aside class="toc">
+    <p class="toc-mark">Field notes</p>
+    <input type="checkbox" id="nav-toggle">
+    <label class="toc-toggle-label" for="nav-toggle">Contents ▾</label>
+    <nav>
+      <a href="#overview">Overview</a>
+
+      <span class="group-label toc-dot-mk">Möuseley Kräs</span>
+      <a class="indent" href="#mk-purpose">Purpose</a>
+      <a class="indent" href="#mk-concepts">CS underpinnings</a>
+      <a class="indent" href="#mk-pipeline">Cage-card pipeline</a>
+      <a class="indent" href="#mk-litter">Litter-entry portal</a>
+
+      <span class="group-label toc-dot-xpx">Xol-Pots-Xol</span>
+      <a class="indent" href="#xpx-purpose">Purpose</a>
+      <a class="indent" href="#xpx-concepts">CS underpinnings</a>
+      <a class="indent" href="#xpx-flow">Consolidation flow</a>
+
+      <span class="group-label">&nbsp;</span>
+      <a href="#robustness">Robustness pass</a>
+      <a href="#compatibility">Compatibility</a>
+      <a href="#comparison">Comparison</a>
+    </nav>
+  </aside>
+
+  <main>
+    <p class="kicker">Architecture reference · genotyping &amp; inventory tooling</p>
+    <h1 class="title">Two Portals, One Colony</h1>
+    <p class="deck">
+      How a manually-downloaded Transnetyx CSV becomes a trustworthy inventory record and a
+      printed cage card — and how a second, independent tool later consolidates the cage cards
+      that pipeline produces. Written up as a systems &amp; computer-science reference, not a
+      user guide.
+    </p>
+
+    <section id="overview">
+      <div class="section-head">
+        <h2>System relationship</h2>
+      </div>
+      <p class="lede">
+        Möuseley Kräs is the only producer of cage-card workbooks in this pipeline.
+        Xol-Pots-Xol is a pure downstream consumer — a separate codebase, with its own
+        <code>pyproject.toml</code>, <code>src/</code>, and tests, that reads workbooks Möuseley
+        Kräs already wrote and never reaches back into its inventory, raw data, or source.
+      </p>
+      <div class="diagram-panel">
+        <div class="diagram-scroll">
+<pre class="mermaid">
+flowchart LR
+    TX["Transnetyx\n(external genotyping vendor)"] -->|manually downloaded CSV| MK["Möuseley Kräs\ngenotyping · inventory · cage cards"]
+    MK -->|sparse Live Label\nworkbooks| XPX["Xol-Pots-Xol\ncage-card consolidator"]
+    XPX -->|new, fuller workbook| OUT["Consolidated cage-card workbook"]
+</pre>
+        </div>
+        <p class="diagram-caption">The arrow only runs one way: production, then consolidation. Neither tool imports the other's code.</p>
+      </div>
+    </section>
+
+    <!-- ============ MÖUSELEY KRÄS ============ -->
+
+    <section id="mk-purpose">
+      <div class="section-head">
+        <span class="badge badge-mk">01 · Möuseley Kräs</span>
+        <h2>Purpose</h2>
+      </div>
+      <p class="lede">
+        Möuseley Kräs turns manually downloaded Transnetyx genotyping-result CSVs into a
+        reconciled copy of the mouse inventory, an audit/exception report explaining exactly
+        what happened to every record, and a Live Label weaning-card workbook for the vivarium.
+        A second, independent portal registers brand-new litters into the inventory before
+        they've been genotyped at all.
+      </p>
+      <p>
+        Its defining trait is safety: it is built to be trustworthy with irreplaceable lab
+        records while remaining an ordinary local script and web app, with no database and no
+        dedicated operations team behind it.
+      </p>
+    </section>
+
+    <section id="mk-concepts">
+      <div class="section-head">
+        <span class="badge badge-mk">CS underpinnings</span>
+        <h2>Nine ideas the design leans on</h2>
+      </div>
+      <div class="concepts">
+        <article class="concept concept-mk">
+          <span class="concept-num">01</span>
+          <h4>Functional core, imperative shell</h4>
+          <p>Decisions — does this litter's math add up? does this genotype match? which
+            cage-mates can share a card? — live in pure functions with no I/O, always returning
+            the same answer for the same input. Orchestration (reading files, calling R, writing
+            CSVs) is a thin shell around that core, so the hard logic is unit-testable without
+            touching a real file.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">02</span>
+          <h4>Configuration as data</h4>
+          <p>Which spreadsheet column holds which field, what genotype pattern counts as
+            approved, which cell on the template maps to which output — none of it is
+            hard-coded. It's declarative data in one config file, so the lab can re-point the
+            tool at a differently-shaped spreadsheet without touching source.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">03</span>
+          <h4>Lenient parsing, zero-tolerance matching</h4>
+          <p>Column names drift in real exports, so header lookup normalizes case and
+            punctuation. But matching a mouse to a record is always an exact key match — no
+            fuzzy identity matching, no auto-created rows. Cosmetic uncertainty is absorbed;
+            identity uncertainty never is.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">04</span>
+          <h4>Fail-closed, explicit-outcome auditing</h4>
+          <p>Every record gets a status from a closed set — <code>READY</code>,
+            <code>CONFLICT</code>, <code>MANUAL_REVIEW</code>, <code>NO_RESULT</code>,
+            <code>PENDING_RERUN</code>. There's no silent success path. A conflicting genotype
+            is reported, never auto-resolved.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">05</span>
+          <h4>Checksum-verified copy-on-write</h4>
+          <p>Before writing to the inventory, Möuseley Kräs hashes the existing file and takes a
+            verified backup. Updates land on a new copy, never in place — copy-on-write scaled
+            down to a single CSV, the same instinct behind journaling filesystems.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">06</span>
+          <h4>Idempotency via content hashing</h4>
+          <p>Every raw input is SHA-256 hashed against a small index before processing.
+            Re-running the same export twice is blocked by default — an idempotency key, the
+            same idea a payment API uses to structurally prevent double-processing.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">07</span>
+          <h4>Process isolation across a language boundary</h4>
+          <p>Probe-code translation runs in R; orchestration and matching run in Python. The two
+            talk over a subprocess with an explicit argument list — never a shell string — and a
+            handful of well-known CSV columns. Right tool per layer, narrow inspectable seam
+            between them.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">08</span>
+          <h4>Two portals, one bounded context each</h4>
+          <p>Cage Card Production and Mouse Inventory Update share the same backup and
+            conflict-detection primitives but stay independent code paths — each owns one job
+            and one input shape, rather than one form trying to do both.</p>
+        </article>
+        <article class="concept concept-mk">
+          <span class="concept-num">09</span>
+          <h4>Least-privilege external integration</h4>
+          <p>The one live, shared external system it touches — a Google Sheet other lab members
+            edit — gets a single opt-in, read-only overlay fetching exactly two fields, filling
+            blanks only. It can't overwrite a local value, can't touch genotype, and a fetch
+            failure degrades to a warning, never a failed run. Every cell it fills is now logged
+            per mouse ID, not just an aggregate count.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="mk-pipeline">
+      <div class="section-head">
+        <span class="badge badge-mk">Flow</span>
+        <h2>Cage Card Production pipeline</h2>
+      </div>
+      <div class="diagram-panel">
+        <div class="diagram-scroll">
+<pre class="mermaid">
+flowchart TD
+    A["Raw Transnetyx CSV\n(manually downloaded)"] --> B["Archive input\n+ SHA-256 duplicate check"]
+    B --> C["R subprocess\ntranslates probe codes\ninto genotype calls"]
+    C --> D["Validate translated CSV\nrequired columns · genotype\npattern · failure tokens"]
+    D --> E["Match records to inventory\nexact ID match only"]
+    E --> F{"Conflict with\nexisting genotype?"}
+    F -->|yes| G["Flag CONFLICT\nnever overwritten"]
+    F -->|no| H["Checksum-backed backup,\nthen write updated copy"]
+    G --> I["Exception / audit report\nevery record gets an\nexplicit outcome"]
+    H --> I
+    I --> J{"Cage cards\nrequested?"}
+    J -->|yes| K["Optional: fill blank\nDOB / Wean-By from\nread-only Sheets overlay"]
+    K --> L["Generate Live Label\ncage-card workbook"]
+    J -->|stage fails| M["Earlier artifacts\nbackup · inventory · audit\nare preserved regardless"]
+</pre>
+        </div>
+        <p class="diagram-caption"><span class="swatch" style="background:var(--accent-mk)"></span>Every stage failure preserves what earlier stages already wrote successfully.</p>
+      </div>
+    </section>
+
+    <section id="mk-litter">
+      <div class="section-head">
+        <span class="badge badge-mk">Flow</span>
+        <h2>Mouse Inventory Update (litter entry)</h2>
+      </div>
+      <div class="diagram-panel">
+        <div class="diagram-scroll">
+<pre class="mermaid">
+flowchart TD
+    A["Form input: strain, DOB,\nmother, father, total pups,\nfemale count, male count,\nfirst/last mouse ID"] --> B{"Do pup counts, sex\ncounts, and ID-range\nsize all agree?"}
+    B -->|no| C["Explicit InputValidationError\nnothing written"]
+    B -->|yes| D["Expand ID range —\nearliest IDs to females,\nrest to males"]
+    D --> E{"Mouse ID already\nin inventory?"}
+    E -->|yes| F["CONFLICT audit entry\nnever overwritten"]
+    E -->|no| G["Append new row,\ngenotype left blank"]
+    F --> H["Checksum-backed backup\n+ audit CSV"]
+    G --> H
+</pre>
+        </div>
+        <p class="diagram-caption">Genotype stays blank by design — it's filled in later, by the pipeline above, once Transnetyx results exist.</p>
+      </div>
+    </section>
+
+    <!-- ============ XOL-POTS-XOL ============ -->
+
+    <section id="xpx-purpose">
+      <div class="section-head">
+        <span class="badge badge-xpx">02 · Xol-Pots-Xol</span>
+        <h2>Purpose</h2>
+      </div>
+      <p class="lede">
+        Möuseley Kräs produces Live Label workbooks one small batch at a time, so a lab
+        accumulates many <em>sparse</em> workbooks — each covering a handful of cages.
+        Xol-Pots-Xol reads a set of those already-produced workbooks and merges compatible
+        entries into fewer, fuller ones, without ever touching Möuseley Kräs's inventory, raw
+        data, or template.
+      </p>
+    </section>
+
+    <section id="xpx-concepts">
+      <div class="section-head">
+        <span class="badge badge-xpx">CS underpinnings</span>
+        <h2>Six ideas the design leans on</h2>
+      </div>
+      <div class="concepts">
+        <article class="concept concept-xpx">
+          <span class="concept-num">01</span>
+          <h4>Narrow coupling to one piece of domain content</h4>
+          <p>Almost everything — strain names, dam/sire genotype text, most cells — is opaque
+            text, copied through untouched. The one exception is the Kras locus, which the tool
+            must understand to decide "same genotype." That knowledge lives in one small function
+            backed by a named, versioned constant — not a general genotype parser.</p>
+        </article>
+        <article class="concept concept-xpx">
+          <span class="concept-num">02</span>
+          <h4>Fail-open to "don't merge," never to a guess</h4>
+          <p>When a genotype can't be confidently classified, the mouse goes to an explicit
+            "unconsolidated" bucket and gets reported — the same instinct as Möuseley Kräs's own
+            philosophy, arrived at independently in a separate codebase. Each one now carries a
+            specific reason: unrecognized sex, blank strain, unsupported Kras genotype, or no
+            usable DOB.</p>
+        </article>
+        <article class="concept concept-xpx">
+          <span class="concept-num">03</span>
+          <h4>Pure read → transform → write-fresh</h4>
+          <p>No workbook is ever edited in place. N sparse workbooks are read into memory,
+            groups are computed, and one brand-new output workbook is written from scratch —
+            side-effect-free on every input, trivially re-runnable.</p>
+        </article>
+        <article class="concept concept-xpx">
+          <span class="concept-num">04</span>
+          <h4>Schema-as-contract via strict headers</h4>
+          <p>Cells are read by fixed column index, but only after the header row is validated
+            against an expected-headers contract. A stricter contract than Möuseley Kräs's
+            header matching, because its own inputs are far more uniform — the right rigidity
+            follows the actual variance in the input, not one rule everywhere.</p>
+        </article>
+        <article class="concept concept-xpx">
+          <span class="concept-num">05</span>
+          <h4>Deterministic equivalence-class grouping</h4>
+          <p>Mice are grouped by a composite key: normalized strain, Kras-normalized genotype
+            class, and parents. <code>"LSL-G12D/+"</code> and <code>"K/+"</code> collapse to one
+            canonical key — consolidation is equivalence-class partitioning, not string matching.</p>
+        </article>
+        <article class="concept concept-xpx">
+          <span class="concept-num">06</span>
+          <h4>Output separates "done" from "needs a human"</h4>
+          <p>The result workbook always has four sheets, each with one job: <code>Sheet1</code>
+            holds only successfully consolidated cages; <code>Unconsolidated</code> preserves
+            every mouse that couldn't be grouped, kept structurally apart so it's never mistaken
+            for a real cage; <code>Review Needed</code> lists each one with its source and
+            reason; <code>Report</code> records counts and input-file hashes.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="xpx-flow">
+      <div class="section-head">
+        <span class="badge badge-xpx">Flow</span>
+        <h2>Consolidation flow</h2>
+      </div>
+      <div class="diagram-panel">
+        <div class="diagram-scroll">
+<pre class="mermaid">
+flowchart TD
+    A["N sparse Live Label\nworkbooks, already produced\nby Möuseley Kräs"] --> B["Validate header row against\nexpected-headers contract"]
+    B --> C["Read cells by fixed\ncolumn index into an\nin-memory mouse model"]
+    C --> D["Normalize strain text\ntrim / casefold only"]
+    C --> E["Kras-only genotype\nnormalization\nallowlist: +, K, LSL-G12D"]
+    D --> F["Composite consolidation key:\nstrain + genotype class\n+ parents + ..."]
+    E --> F
+    F --> G{"Genotype key\nrecognized?"}
+    G -->|no| H["Unconsolidated + Review\nNeeded sheets: mouse + reason"]
+    G -->|yes| I["Group mice sharing\nthe same key -> Sheet1"]
+    I --> J["Write the 4-sheet\noutput workbook"]
+    H --> J
+</pre>
+        </div>
+        <p class="diagram-caption"><span class="swatch" style="background:var(--accent-xpx)"></span>Unrecognized genotypes never block the run — they're set aside, visibly, with a named reason.</p>
+      </div>
+    </section>
+
+    <section id="robustness">
+      <div class="section-head">
+        <span class="badge badge-mk">Status</span>
+        <h2>Robustness pass (in response to external review)</h2>
+      </div>
+      <p class="lede">
+        An external review (via another coding assistant) proposed a robustness checklist after
+        reading only this document, not the code. Auditing each item against the actual codebase
+        found several already implemented (run manifests, dry-run mode, atomic backup writes) and
+        confirmed the rest as genuine gaps. What actually got built:
+      </p>
+      <div class="concepts">
+        <article class="concept concept-mk">
+          <span class="concept-num">MK</span>
+          <h4>Möuseley Kräs</h4>
+          <p>Regression tests for four previously-uncovered branches — existing-genotype
+            CONFLICT, unknown-mouse-ID, missing-translated-column, duplicate-inventory-ID — plus
+            a unicode-safety test. The run manifest now records app/Python/R versions, the
+            config's path and checksum, whether the Sheets overlay is enabled, and a SHA-256 of
+            every output artifact. The Sheets overlay reports exactly which mouse IDs and fields
+            it filled.</p>
+        </article>
+        <article class="concept concept-xpx">
+          <span class="concept-num">XPX</span>
+          <h4>Xol-Pots-Xol</h4>
+          <p>Unconsolidated mice no longer blend into the same sheet as real consolidated cages —
+            the clearest actual defect the review surfaced. The Kras grammar became a named,
+            versioned contract instead of an inline dict. Eight new tests cover previously-blind
+            spots: an unrecognized Kras string end-to-end, a reordered header row, duplicate
+            mouse IDs, input-file immutability, and the new four-sheet output.</p>
+        </article>
+      </div>
+      <p>
+        <strong>Deliberately deferred</strong> — each is a real design decision, not a bug fix:
+        an inventory propose→approve→promote workflow step, new CLI subcommands
+        (<code>validate-config</code>, <code>inspect-run</code>, <code>summarize-audit</code>), a
+        formal config schema-version field, a Python/R dependency lock file, and a property-based
+        testing framework.
+      </p>
+    </section>
+
+    <section id="compatibility">
+      <div class="section-head">
+        <h2>Software versions &amp; device compatibility</h2>
+      </div>
+      <p class="lede">
+        Both projects are local, single-user tools, developed and currently only tested on
+        <strong>macOS</strong>. Neither has been run or verified on Windows or Linux — file-path
+        conventions (e.g. the R executable path defaulting to <code>/usr/local/bin/Rscript</code>)
+        assume a Mac.
+      </p>
+
+      <h3>Möuseley Kräs (<code>automouse</code>, v0.3.1)</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Requirement</th>
+              <th scope="col">Constraint</th>
+              <th scope="col">Verified with</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Python</th><td><code>&gt;=3.11</code></td><td>3.14.6</td></tr>
+            <tr>
+              <th scope="row">R (external, via subprocess)</th>
+              <td>Any version with <code>dplyr</code> + <code>purrr</code></td>
+              <td>4.5.2 (system); also verified against 4.5.3 in an isolated conda-forge environment</td>
+            </tr>
+            <tr><th scope="row">PyYAML</th><td><code>&gt;=6.0</code> (core)</td><td>—</td></tr>
+            <tr>
+              <th scope="row">openpyxl, pandas</th>
+              <td><code>&gt;=3.1</code>, <code>&gt;=2.2</code> (<code>inventory</code> extra)</td>
+              <td>3.1.5 (openpyxl)</td>
+            </tr>
+            <tr><th scope="row">Flask</th><td><code>&gt;=3.0</code> (<code>webapp</code> extra)</td><td>—</td></tr>
+            <tr>
+              <th scope="row">google-api-python-client, google-auth</th>
+              <td><code>&gt;=2.100</code>, <code>&gt;=2.23</code> (<code>sheets</code> extra, optional)</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="diagram-caption">
+        None of these are pinned to an exact version or locked (see the deferred items above) —
+        today's compatibility is "known to work at the versions above," not a guaranteed range.
+      </p>
+
+      <h3>Xol-Pots-Xol (<code>xolpotsxol</code>, v0.1.0)</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Requirement</th>
+              <th scope="col">Constraint</th>
+              <th scope="col">Verified with</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Python</th><td><code>&gt;=3.11</code></td><td>3.14.6</td></tr>
+            <tr><th scope="row">openpyxl</th><td><code>&gt;=3.1</code></td><td>3.1.5</td></tr>
+            <tr><th scope="row">Flask</th><td><code>&gt;=3.0</code></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="diagram-caption">No R dependency at all — pure Python plus <code>openpyxl</code>.</p>
+
+      <h3>Device compatibility</h3>
+      <ul>
+        <li>Development/test machine: macOS 26.6.2 (build 25G83), Apple Silicon (arm64).</li>
+        <li>Both are desktop CLI programs plus an optional local Flask web server — no mobile or
+          tablet app, and neither can run natively on a phone/tablet.</li>
+        <li>The web server binds to <code>127.0.0.1</code> by default. It can be pointed at the
+          Mac's LAN address (<code>automouse serve --host &lt;lan-ip&gt;</code>) so another device
+          on the same network — e.g. an iPad — can reach it in a browser, but the Mac still has
+          to be the one running the server the whole time; there's no offline or standalone mode
+          for a second device, and no built-in authentication, so only do this on a trusted
+          network.</li>
+        <li>Apple Silicon vs. Intel: nothing in the codebase is architecture-specific — R and
+          Python are both installed system-wide as arch-appropriate builds by their own
+          installers — but an Intel Mac has not been separately verified.</li>
+      </ul>
+    </section>
+
+    <section id="comparison">
+      <div class="section-head">
+        <h2>Comparison at a glance</h2>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Aspect</th>
+              <th scope="col">Möuseley Kräs</th>
+              <th scope="col">Xol-Pots-Xol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Role</th>
+              <td>Producer — genotyping → inventory → cage cards</td>
+              <td>Consumer — consolidates cage cards</td>
+            </tr>
+            <tr>
+              <th scope="row">Column matching</th>
+              <td>Lenient header resolution, strict identity matching</td>
+              <td>Strict header contract, fixed column index</td>
+            </tr>
+            <tr>
+              <th scope="row">Domain coupling</th>
+              <td>Deep — genotype validation, inventory matching, cell mapping</td>
+              <td>Shallow / opaque, except one narrow Kras-specific function</td>
+            </tr>
+            <tr>
+              <th scope="row">Persistence model</th>
+              <td>Checksum-backed copy-on-write; append-only for new litters</td>
+              <td>Always writes a brand-new workbook; never mutates inputs</td>
+            </tr>
+            <tr>
+              <th scope="row">External integrations</th>
+              <td>One explicitly-scoped, opt-in, read-only Sheets overlay, audited per mouse ID</td>
+              <td>None</td>
+            </tr>
+            <tr>
+              <th scope="row">Uncertainty handling</th>
+              <td>Explicit per-record audit status enum; conflicts never auto-resolved</td>
+              <td>"Unconsolidated" + "Review Needed" sheets, each mouse with a named reason</td>
+            </tr>
+            <tr>
+              <th scope="row">Interfaces</th>
+              <td>CLI + local Flask web app, two portals</td>
+              <td>Standalone tool, own CLI and tests</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      A systems reference for a local, safety-first mouse-genotyping pipeline and its
+      standalone cage-card consolidator. Written to hand off context, not to instruct a user.
+    </footer>
+  </main>
+</div>

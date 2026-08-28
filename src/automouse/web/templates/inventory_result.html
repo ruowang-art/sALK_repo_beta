@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Möuseley Kräs — Litter {{ run_id }}{% endblock %}
+{% block content %}
+<h2>Litter entry result</h2>
+<p>Run ID: {{ run_id }}</p>
+
+{% if dry_run %}
+<div class="panel warning" role="status">
+  <p>This was a preview (dry run). No updated inventory copy was written.</p>
+</div>
+{% else %}
+<div class="panel success" role="status">
+  <p>Completed. Review the outcome of every pup below.</p>
+</div>
+{% endif %}
+
+<table class="counts">
+  <caption>What happened to each pup</caption>
+  <thead>
+    <tr>
+      <th scope="col">Mouse ID</th>
+      <th scope="col">Outcome</th>
+      <th scope="col">Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in entries %}
+    <tr>
+      <td>{{ entry.mouse_id or "(none)" }}</td>
+      <td>{{ entry.action.value }}</td>
+      <td>{{ entry.messages | join("; ") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>Downloads</h3>
+{% if downloads %}
+<ul class="downloads">
+  {% for item in downloads %}
+  <li><a href="{{ item.url }}">{{ item.label }}</a> <span class="help-text">({{ item.name }})</span></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No inventory changes were written.</p>
+{% endif %}
+
+<p><a class="button" href="{{ url_for('inventory_upload') }}">Enter another litter</a></p>
+{% endblock %}

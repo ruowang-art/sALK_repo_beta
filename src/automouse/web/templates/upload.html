@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Möuseley Kräs — Cage Card Production{% endblock %}
+{% block content %}
+<h2>Cage Card Production</h2>
+<p>Select one or more raw Transnetyx CSV files. All of them will be processed together as one batch:
+translated, matched against the inventory to update genotypes, and used to produce Live Label cage
+cards.</p>
+
+<form method="post" action="{{ url_for('run') }}" enctype="multipart/form-data" id="run-form">
+  <div class="field">
+    <label for="raw_files">Raw Transnetyx CSV file(s)</label>
+    <div class="dropzone" id="dropzone">
+      <input
+        type="file"
+        id="raw_files"
+        name="raw_files"
+        accept=".csv"
+        multiple
+        required
+        aria-describedby="raw_files_help"
+      >
+      <p class="help-text" id="raw_files_help">
+        Choose the file(s) directly from where Transnetyx results were downloaded. You can also drag
+        files onto this box.
+      </p>
+    </div>
+  </div>
+
+  <fieldset>
+    <legend>Options</legend>
+    <div class="checkbox-row">
+      <input type="checkbox" id="dry_run" name="dry_run">
+      <label for="dry_run">Preview only (dry run) — do not write an updated inventory copy or cage cards</label>
+    </div>
+  </fieldset>
+
+  <div class="actions">
+    <button type="submit">Run Möuseley Kräs</button>
+  </div>
+  <p id="processing-status" role="status" aria-live="polite"></p>
+</form>
+
+<script>
+  (function () {
+    var dropzone = document.getElementById("dropzone");
+    var input = document.getElementById("raw_files");
+    var form = document.getElementById("run-form");
+    var status = document.getElementById("processing-status");
+
+    ["dragenter", "dragover"].forEach(function (eventName) {
+      dropzone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (eventName) {
+      dropzone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        dropzone.classList.remove("dragover");
+      });
+    });
+    dropzone.addEventListener("drop", function (event) {
+      if (event.dataTransfer && event.dataTransfer.files.length) {
+        input.files = event.dataTransfer.files;
+      }
+    });
+    form.addEventListener("submit", function () {
+      status.textContent = "Processing… this can take a little while for larger batches.";
+    });
+  })();
+</script>
+{% endblock %}

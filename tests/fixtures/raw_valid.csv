@@ -1,0 +1,4 @@
+WellPlate,Strain,Well,Sample,TranslatedResult,G12D mut,Y
+TEST001,Kras,A1,CM0001,,--,+
+TEST001,Kras,A2,CM0002,,+-, -
+

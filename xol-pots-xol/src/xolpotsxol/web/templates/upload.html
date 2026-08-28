@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Xol-Pots-Xol — Consolidate cage cards{% endblock %}
+{% block content %}
+<h2>Upload Live Label cage-card workbooks</h2>
+<p>
+  Select one or more <code>.xlsx</code> Live Label cage-card workbooks produced by Möuseley Kräs.
+  Xol-Pots-Xol will cross-compare every cage across all of them and consolidate sparse ones into
+  cages of up to 5 mice, where all of the following match:
+</p>
+<ul>
+  <li>the same sex,</li>
+  <li>the same strain,</li>
+  <li>the same (normalized) Kras genotype,</li>
+  <li>a date-of-birth window of at most 2 days (males) or 7 days (females).</li>
+</ul>
+<p>
+  A mouse that doesn't have a recognized sex, strain, Kras genotype, or usable date of birth is
+  never guessed into a group — it's kept in its original cage grouping in the output instead.
+</p>
+
+<form method="post" action="{{ url_for('consolidate_route') }}" enctype="multipart/form-data" id="consolidate-form">
+  <div class="field">
+    <label for="cage_card_files">Live Label cage-card workbook(s)</label>
+    <input
+      type="file"
+      id="cage_card_files"
+      name="cage_card_files"
+      accept=".xlsx"
+      multiple
+      required
+      aria-describedby="cage_card_files_help"
+    >
+    <p class="help-text" id="cage_card_files_help">
+      Command-click or Shift-click to select more than one file.
+    </p>
+  </div>
+  <div class="actions">
+    <button type="submit">Consolidate</button>
+  </div>
+  <p id="processing-status" role="status" aria-live="polite"></p>
+</form>
+
+<script>
+  (function () {
+    var form = document.getElementById("consolidate-form");
+    var status = document.getElementById("processing-status");
+    form.addEventListener("submit", function () {
+      status.textContent = "Consolidating…";
+    });
+  })();
+</script>
+{% endblock %}

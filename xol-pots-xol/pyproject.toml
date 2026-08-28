@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xolpotsxol"
+version = "0.1.0"
+description = "Consolidate sparse Live Label cage-card workbooks into fuller cages"
+requires-python = ">=3.11"
+dependencies = [
+  "openpyxl>=3.1",
+  "Flask>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+xolpotsxol = "xolpotsxol.cli:main"
+xolpotsxol-serve = "xolpotsxol.serve:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"xolpotsxol.web" = ["templates/*.html", "static/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

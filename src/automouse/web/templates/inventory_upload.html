@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Möuseley Kräs — Mouse Inventory Update{% endblock %}
+{% block content %}
+<h2>Mouse Inventory Update</h2>
+<p>
+  Record one litter right after birth, before Transnetyx genotyping. Möuseley Kräs adds one new
+  inventory row per pup, with genotype left blank — genotype gets filled in later by Cage Card
+  Production once Transnetyx results come back for these mice.
+</p>
+
+<form method="post" action="{{ url_for('inventory_submit') }}" id="litter-form">
+  <div class="field">
+    <label for="strain">Strain</label>
+    {% if known_strains %}
+    <select id="strain" name="strain" required>
+      <option value="" disabled selected>Select a strain…</option>
+      {% for strain in known_strains %}
+      <option value="{{ strain }}">{{ strain }}</option>
+      {% endfor %}
+    </select>
+    {% else %}
+    <input type="text" id="strain" name="strain" required>
+    {% endif %}
+  </div>
+  <div class="field">
+    <label for="dob">Date of birth</label>
+    <input type="date" id="dob" name="dob" required>
+  </div>
+  <div class="field">
+    <label for="mother">Mother</label>
+    <input type="text" id="mother" name="mother" required>
+  </div>
+  <div class="field">
+    <label for="father">Father</label>
+    <input type="text" id="father" name="father" required>
+  </div>
+
+  <fieldset>
+    <legend>Pups</legend>
+    <div class="field">
+      <label for="total_pups">Number of pups (total)</label>
+      <input type="number" id="total_pups" name="total_pups" min="1" required>
+      <p class="help-text">Must equal the size of the mouse ID range below, and the female + male counts.</p>
+    </div>
+    <div class="field">
+      <label for="female_count">Number of females</label>
+      <input type="number" id="female_count" name="female_count" min="0" value="0" required>
+    </div>
+    <div class="field">
+      <label for="male_count">Number of males</label>
+      <input type="number" id="male_count" name="male_count" min="0" value="0" required>
+    </div>
+    <p class="help-text">
+      Leave a count at 0 if the litter has no pups of that sex. Females are always assigned the
+      earliest mouse IDs in the range below, males the remaining ones.
+    </p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Littermates (mouse ID range)</legend>
+    <div class="field">
+      <label for="first_mouse_id">First mouse ID in litter</label>
+      <input type="text" id="first_mouse_id" name="first_mouse_id" required placeholder="e.g. CM12000">
+    </div>
+    <div class="field">
+      <label for="last_mouse_id">Last mouse ID in litter</label>
+      <input type="text" id="last_mouse_id" name="last_mouse_id" required placeholder="e.g. CM12012">
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Options</legend>
+    <div class="checkbox-row">
+      <input type="checkbox" id="dry_run" name="dry_run">
+      <label for="dry_run">Preview only (dry run) — do not write an updated inventory copy</label>
+    </div>
+  </fieldset>
+
+  <div class="actions">
+    <button type="submit">Add litter to inventory</button>
+  </div>
+  <p id="litter-status" role="status" aria-live="polite"></p>
+</form>
+
+<script>
+  (function () {
+    var form = document.getElementById("litter-form");
+    var status = document.getElementById("litter-status");
+    form.addEventListener("submit", function () {
+      status.textContent = "Adding litter…";
+    });
+  })();
+</script>
+{% endblock %}

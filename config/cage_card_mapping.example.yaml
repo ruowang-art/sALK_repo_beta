@@ -1,0 +1,11 @@
+{
+  "status": "implemented",
+  "reference_workbook": "Live_Label_Salk_Cage_Card_Data_Template (1).xlsx",
+  "reference_sheet": "Sheet1",
+  "reference_table_range": "A1:W71",
+  "grouping_strategy": "weaning_compatible_cage",
+  "male_dob_window_days": 5,
+  "female_dob_window_days": 7,
+  "generate_for_actions": ["UPDATED", "CONFIRMED"],
+  "notes": "Rows are grouped by compatible Sex, Strain, Kras genotype, and configurable DOB windows, then split at five mice. Existing Cage is not required."
+}

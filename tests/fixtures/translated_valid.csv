@@ -1,0 +1,4 @@
+WellPlate,Strain,Well,Sample,TranslatedResult,G12D.mut,Y,Kras,Sex,Genotype
+TEST001,Kras,A1,CM0001,,--,+,+/+,Male,'+/+
+TEST001,Kras,A2,CM0002,,+-, -,LSL-G12D/+,Female,LSL-G12D/+
+

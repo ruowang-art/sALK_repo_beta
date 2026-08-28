@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Möuseley Kräs — Could not complete{% endblock %}
+{% block content %}
+<h2>Möuseley Kräs could not complete this run</h2>
+<div class="panel error" role="alert">
+  <p>Error: {{ message }}</p>
+</div>
+<p>Nothing that had already completed successfully was undone. No new inventory copy or cage cards were produced for this run.</p>
+<p><a class="button" href="{{ url_for('index') }}">Start over</a></p>
+{% endblock %}
