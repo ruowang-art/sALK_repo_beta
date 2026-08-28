@@ -47,10 +47,35 @@ The output workbook always has four sheets:
 - **Report** — the Kras grammar version, input/output counts, and a per-input-file `.xlsx` hash
   and row count, for reproducibility.
 
+## Setup
+
+Xol-Pots-Xol is a standalone sibling project with its own virtual environment — it never shares
+Möuseley Kräs's `.venv`, so the two projects can't drift into depending on each other's installed
+package versions. From the project root, double-click `XolPotsXol_Setup.command`, or manually:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e .
+```
+
+This registers the `xolpotsxol` and `xolpotsxol-serve` commands directly in `.venv/bin/` — no
+`PYTHONPATH` needed for normal use.
+
+`requirements.lock.txt` (generated with `pip-tools` using Python 3.11, the oldest supported
+version, as the resolving interpreter, so it doesn't pin a package version with no wheel for an
+older supported Python; regenerate with any 3.11 interpreter:
+`python3.11 -m pip-tools compile --extra dev pyproject.toml`, or the equivalent `pip-compile` call
+from a 3.11 venv with `pip-tools` installed) pins the exact dependency versions verified working,
+checked to install cleanly on Python 3.11–3.14. `XolPotsXol_Setup.command` reconciles to it on
+every run, not just when a package is missing.
+
+If `xolpotsxol`/`xolpotsxol-serve` ever fails with `ModuleNotFoundError` right after a successful
+setup, run `../scripts/fix_hidden_venv.sh` from this directory.
+
 ## Web app
 
 ```bash
-PYTHONPATH="$PWD/src" ../.venv/bin/python -m xolpotsxol.serve
+.venv/bin/xolpotsxol-serve
 ```
 
 or double-click `XolPotsXol_WebApp.command` from the project root. Upload one or more Live Label
@@ -59,7 +84,7 @@ or double-click `XolPotsXol_WebApp.command` from the project root. Upload one or
 ## Command line
 
 ```bash
-PYTHONPATH="$PWD/src" ../.venv/bin/python -m xolpotsxol.cli \
+.venv/bin/xolpotsxol \
   path/to/cage_cards_1.xlsx path/to/cage_cards_2.xlsx \
   --output path/to/consolidated.xlsx
 ```
@@ -69,5 +94,9 @@ PYTHONPATH="$PWD/src" ../.venv/bin/python -m xolpotsxol.cli \
 ## Tests
 
 ```bash
-PYTHONPATH="$PWD/src" ../.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests -v
 ```
+
+The `PYTHONPATH="$PWD/src" ../.venv/bin/python ...` source-path style still works as a fallback
+(e.g. against a different Python without reinstalling), but is no longer the primary supported
+way to run this project.

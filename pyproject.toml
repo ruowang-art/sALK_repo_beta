@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "automouse"
 version = "0.3.1"
 description = "Safe local Transnetyx-to-inventory and cage-card workflow"
-readme = "README.md"
+readme = "Markdown_files/README.md"
 requires-python = ">=3.11"
 dependencies = [
   "PyYAML>=6.0",
@@ -15,6 +15,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
+  "pip-tools>=7.0",
 ]
 inventory = [
   "openpyxl>=3.1",

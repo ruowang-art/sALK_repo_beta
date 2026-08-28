@@ -10,7 +10,7 @@ Process one or more raw Transnetyx CSV files as one logical batch, safely reconc
 2. Ensure the R packages `dplyr` and `purrr` are installed.
 3. Double-click `AutoMouse_Setup.command`.
 
-Setup creates or reuses the virtual environment, installs third-party libraries only when missing, checks the R packages, invokes Möuseley Kräs 0.3.1 directly from this project's `src` directory, and runs the complete automated test suite. The run command therefore does not depend on a stale editable install or `.venv/bin/automouse` launcher.
+Setup creates or reuses the virtual environment, installs third-party libraries only when missing, registers `automouse` as a direct editable-install command in `.venv/bin/`, checks the R packages, and runs the complete automated test suite. Setup also clears the macOS "hidden" file flag from `.venv` if present — an earlier `ModuleNotFoundError` under Python 3.14 traced back to that flag (set on `.venv`'s contents, likely by a one-time Finder-declutter/backup-exclusion action) combined with Python 3.14's `site.py`, which silently skips hidden `.pth` files. That, plus a stale `build/` directory since removed, was the actual cause — not a fundamental problem with editable installs.
 
 ### Clearing the old setup
 
@@ -37,8 +37,8 @@ If macOS blocks a command file, Control-click it, choose **Open**, and confirm o
 Equivalent Terminal command:
 
 ```bash
-cd "/Users/ruoxiwang/Documents/Salk_Genotype_Troubleshoot"
-PYTHONPATH="$PWD/src" .venv/bin/python -m automouse \
+cd "/path/to/Salk_Genotype_Troubleshoot"
+.venv/bin/automouse \
   --config config/pipeline_run.yaml run --verbose \
   "/path/to/first.csv" "/path/to/second.csv"
 ```
@@ -58,7 +58,7 @@ This is a presentation layer only — it calls the same `run_batch` pipeline as 
 and provides no separate matching/inventory logic of its own. Equivalent Terminal command:
 
 ```bash
-PYTHONPATH="$PWD/src" .venv/bin/python -m automouse --config config/pipeline_run.yaml serve
+.venv/bin/automouse --config config/pipeline_run.yaml serve
 ```
 
 ## Consolidated pipeline

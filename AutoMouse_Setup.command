@@ -83,19 +83,51 @@ if [[ ! -x .venv/bin/python ]]; then
   "$PYTHON_BIN" -m venv .venv
 fi
 
-# A clean environment needs internet only when one of these third-party
-# libraries is absent. An already provisioned environment can be checked and
-# repaired fully offline.
-if ! .venv/bin/python -c 'import yaml, openpyxl, pandas, flask' >/dev/null 2>&1; then
-  echo "Installing required Python libraries..."
-  .venv/bin/python -m pip install \
-    'PyYAML>=6.0' \
-    'openpyxl>=3.1' \
-    'pandas>=2.2' \
-    'Flask>=3.0'
+# Reconcile to requirements.lock.txt on EVERY run (not just when a required
+# library is missing) so an existing environment converges to the pinned
+# versions instead of silently keeping whatever was already installed.
+if [[ -f requirements.lock.txt ]]; then
+  if .venv/bin/python -m pip install -r requirements.lock.txt; then
+    echo "Installed/verified exact, pinned dependency versions from requirements.lock.txt."
+  else
+    echo ""
+    echo "WARNING: could not install from requirements.lock.txt (offline and not cached?)."
+    if .venv/bin/python -c 'import yaml, openpyxl, pandas, flask' >/dev/null 2>&1; then
+      echo "Continuing with the versions already installed in this venv — they are NOT"
+      echo "guaranteed to match requirements.lock.txt. Run this script again once online"
+      echo "to reconcile to the pinned versions."
+    else
+      echo "Falling back to installing required libraries by version range (not pinned)..."
+      .venv/bin/python -m pip install \
+        'PyYAML>=6.0' \
+        'openpyxl>=3.1' \
+        'pandas>=2.2' \
+        'Flask>=3.0'
+    fi
+    echo ""
+  fi
 else
-  echo "Required Python libraries are already installed; using them offline."
+  if ! .venv/bin/python -c 'import yaml, openpyxl, pandas, flask' >/dev/null 2>&1; then
+    echo "Installing required Python libraries (no requirements.lock.txt found; using version ranges)..."
+    .venv/bin/python -m pip install \
+      'PyYAML>=6.0' \
+      'openpyxl>=3.1' \
+      'pandas>=2.2' \
+      'Flask>=3.0'
+  else
+    echo "Required Python libraries are already installed; using them offline."
+  fi
 fi
+
+# Register the automouse package + its "automouse" console-script entry point
+# in this venv, so it can be run directly (.venv/bin/automouse --help)
+# without setting PYTHONPATH by hand. --no-deps because the exact
+# dependency versions were already installed/verified above; setuptools is
+# installed first so the editable build works fully offline on a repeat run.
+if ! .venv/bin/python -c 'import setuptools' >/dev/null 2>&1; then
+  .venv/bin/python -m pip install --no-deps 'setuptools>=68' >/dev/null
+fi
+.venv/bin/python -m pip install --no-deps --no-build-isolation -e . >/dev/null
 
 # The Google Sheet DOB/Wean_By overlay (config/pipeline_run.yaml's
 # sheets_overlay section) needs these libraries only if it is enabled; skip
@@ -115,9 +147,22 @@ if [[ ! -x "$RSCRIPT_BIN" ]]; then
 fi
 "$RSCRIPT_BIN" -e 'missing <- setdiff(c("dplyr", "purrr"), rownames(installed.packages())); if (length(missing)) stop(paste("Missing R packages:", paste(missing, collapse=", ")))' 
 
+# Some Mac configurations mark files inside .venv with the "hidden" macOS
+# file flag (observed here after a manual Finder-declutter/backup-exclusion
+# action on an earlier setup, not something this script itself does). Python
+# 3.14's site.py silently skips any hidden .pth file, which breaks the
+# editable install above with a confusing "No module named 'automouse'" —
+# this is the actual root cause of the ModuleNotFoundError this project
+# previously worked around by abandoning editable installs entirely. Clearing
+# the flag (idempotent, harmless if never set) keeps editable installs
+# working instead of avoiding them.
+chflags -R nohidden .venv 2>/dev/null || true
+
 echo "Checking Möuseley Kräs directly from this project..."
-PYTHONPATH="$PROJECT_DIR/src" .venv/bin/python -c \
+.venv/bin/python -c \
   'import automouse; print("Möuseley Kräs", automouse.__version__, "from", automouse.__file__)'
+.venv/bin/automouse --help >/dev/null
+echo "Direct command works: .venv/bin/automouse (no PYTHONPATH needed)"
 PYTHONPATH="$PROJECT_DIR/src" .venv/bin/python -m automouse --help >/dev/null
 PYTHONPATH="$PROJECT_DIR/src" .venv/bin/python -m unittest discover -s tests -v
 

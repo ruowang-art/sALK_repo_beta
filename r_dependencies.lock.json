@@ -1,0 +1,8 @@
+{
+  "_comment": "Records the exact R version and package versions verified working with the Transnetyx genotyping translation script (see r.translation_script in config/pipeline_run.yaml). This is a plain reproducibility record, not a renv project: the translation script lives outside this repo by design (see CLAUDE.md), so a full renv-managed project doesn't cleanly apply here. Regenerate by running the Rscript snippet in README.md's 'R dependencies' section.",
+  "r_version": "4.5.2",
+  "packages": {
+    "dplyr": "1.2.1",
+    "purrr": "1.1.0"
+  }
+}
