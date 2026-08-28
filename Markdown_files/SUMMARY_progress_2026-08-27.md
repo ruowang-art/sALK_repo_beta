@@ -96,9 +96,9 @@ decision for the user, not something to solve unilaterally.
 
 ## Current status
 
-- **Committed to git**: everything through the end of Phase 1 (initial commit, 93 files).
-- **Not yet committed**: all of Phase 2 (separate Xol-Pots-Xol venv/setup script, dependency
-  locks, the editable-install bug fix, doc updates).
+- **Committed to git**: Phase 1 (initial commit) and Phase 2 (second commit — separate Xol-Pots-Xol
+  venv/setup script, dependency locks resolved against Python 3.11, the editable-install fix,
+  root CLAUDE.md/README.md shims, doc updates).
 - **Not started**: Phase 3 (Windows/Linux launcher equivalents) and Phase 4 (actual cross-platform
   verification, which needs CI since this session can only run/verify on macOS).
 

@@ -1,6 +1,6 @@
 # Möuseley Kräs & Xol-Pots-Xol — Progress Log
 
-**Status: Phase 1 implemented, verified, and committed. Phase 2 implemented and verified on macOS/Python 3.11–3.14, awaiting final review and commit. Phase 3 (cross-platform launchers) and Phase 4 (actual Windows/Linux verification) not yet started.**
+**Status: Phase 1 and Phase 2 implemented, verified, and committed (macOS/Python 3.11–3.14). Phase 3 (cross-platform launchers) and Phase 4 (actual Windows/Linux verification) not yet started.**
 
 This is a running progress log for two related-but-independent local tools:
 
@@ -277,7 +277,7 @@ and the existing behavior already surfaces the distinction rather than hiding it
 - [x] Root `CLAUDE.md`/`README.md` remain discoverable (via shims into `Markdown_files/`).
 - [x] The progress status accurately distinguishes implemented, verified, staged, and committed
   work.
-- [ ] Phase 2 committed as one reviewable checkpoint — pending this commit.
+- [x] Phase 2 committed as one reviewable checkpoint.
 
 ## Open decisions waiting on you
 
