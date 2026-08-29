@@ -18,6 +18,26 @@ function Pause-IfInteractive {
     }
 }
 
+# $ErrorActionPreference = "Stop" only turns PowerShell-native errors into
+# terminating ones - it does NOT catch a nonzero exit code from an external
+# native command like python.exe, pip, or a console-script .exe. Every
+# command whose failure must actually stop this script goes through this
+# helper instead of a bare `&` call, so "completed successfully" at the end
+# of this script is never printed after a step that silently failed.
+function Invoke-RequiredCommand {
+    param(
+        [Parameter(Mandatory)][scriptblock]$Command,
+        [Parameter(Mandatory)][string]$Description
+    )
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "FAILED: $Description (exit code $LASTEXITCODE)."
+        Pause-IfInteractive
+        exit 1
+    }
+}
+
 Write-Host "Xol-Pots-Xol Windows setup"
 Write-Host "Project: $XpxDir"
 
@@ -54,7 +74,9 @@ if (-not $PythonBin) {
 }
 
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    & $PythonBin @PythonArgs -m venv .venv
+    Invoke-RequiredCommand -Description "creating the virtual environment" -Command {
+        & $PythonBin @PythonArgs -m venv .venv
+    }
 }
 
 $VenvPython = ".venv\Scripts\python.exe"
@@ -94,13 +116,21 @@ if (Test-Path "requirements.lock.txt") {
 if ($LASTEXITCODE -ne 0) {
     & $VenvPython -m pip install --no-deps "setuptools>=68" | Out-Null
 }
-& $VenvPython -m pip install --no-deps --no-build-isolation -e . | Out-Null
+Invoke-RequiredCommand -Description "installing xolpotsxol as an editable package" -Command {
+    & $VenvPython -m pip install --no-deps --no-build-isolation -e . | Out-Null
+}
 
 Write-Host "Checking Xol-Pots-Xol directly from this project..."
-& $VenvPython -c "import xolpotsxol; print('Xol-Pots-Xol from', xolpotsxol.__file__)"
-& ".venv\Scripts\xolpotsxol.exe" --help | Out-Null
+Invoke-RequiredCommand -Description "importing xolpotsxol from the installed venv" -Command {
+    & $VenvPython -c "import xolpotsxol; print('Xol-Pots-Xol from', xolpotsxol.__file__)"
+}
+Invoke-RequiredCommand -Description ".venv\Scripts\xolpotsxol.exe --help" -Command {
+    & ".venv\Scripts\xolpotsxol.exe" --help | Out-Null
+}
 Write-Host "Direct commands work: xol-pots-xol\.venv\Scripts\xolpotsxol.exe, xolpotsxol-serve.exe"
-& $VenvPython -m unittest discover -s tests -v
+Invoke-RequiredCommand -Description "the xolpotsxol test suite" -Command {
+    & $VenvPython -m unittest discover -s tests -v
+}
 
 Write-Host ""
 Write-Host "Setup and workflow tests completed successfully."

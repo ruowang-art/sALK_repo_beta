@@ -1,6 +1,20 @@
 # Möuseley Kräs & Xol-Pots-Xol — Progress Log
 
-**Status: Phase 1 and Phase 2 implemented, verified, and committed (macOS/Python 3.11–3.14). Phase 3 (cross-platform launchers) implemented — Linux scripts smoke-tested via bash on macOS, Windows PowerShell scripts written but not executed at all — not yet committed. Phase 4 (real Windows/Linux/CI verification) not started.**
+**Status as of 2026-08-28, HEAD = `1d0f587`: Phases 1–3 implemented, verified where possible, and
+committed. The macOS baseline (89→95 tests as the Sheets-write feature added its own tests, plus 35
+for Xol-Pots-Xol) has recurred hidden-`.pth`-flag failures many times across this session and has
+been re-verified fresh each time it did — do not trust a prior run's pass/fail as evidence of the
+*current* checkout; re-run `zsh scripts/fix_hidden_venv.sh` and both suites before relying on this
+status. Linux launchers remain smoke-tested via bash-on-macOS only, not real Linux. Windows
+launchers remain written but never executed. A Phase 4 GitHub Actions workflow and execution plan
+were prepared, then found deleted from the working tree by something outside this session (no git
+history existed for either, since neither had been committed yet) — both were reconstructed, with a
+real PATH-safety bug a review caught along the way fixed in the process; see
+`PHASE_4_EXECUTION_PLAN.md`. Phase 4 itself (real Windows/Linux/CI execution) has still not started
+— no GitHub remote exists for this repo yet. A separate, explicitly-decided Sheets-write capability
+(`sheets_overlay.write_new_litters`) was also added in this session; see
+`SHEETS_WRITE_ARCHITECTURE_DECISION.md` — it is a distinct change from the portability work, not
+part of Phase 3 or 4, and is tracked and committed separately from them.**
 
 This is a running progress log for two related-but-independent local tools:
 
@@ -254,7 +268,11 @@ and the existing behavior already surfaces the distinction rather than hiding it
 
 ---
 
-## Phase 3 — cross-platform launchers (implemented, awaiting commit)
+## Phase 3 — cross-platform launchers
+
+**Historical section — describes the state at the time Phase 3 was first written, before it was
+committed. See the status line at the top of this document for the current, authoritative state;
+Phase 3 has since been committed (and fixed twice more in later review rounds).**
 
 Scope was set explicitly per both codex's and copilot's Phase 3 recommendations: Windows
 PowerShell launchers, Linux shell launchers, platform-neutral path/Rscript-override handling,
@@ -360,10 +378,32 @@ suite failing loudly, never silently.)
 
 ## Open decisions waiting on you
 
+**(Item 2 below is historical — Phase 3 was reviewed and committed in a later round. Left as-is for
+chronology; see the status line at the top of this document for what's actually still open.)**
+
 1. Decide whether/how to give the external R translation script an actual version or Git-commit
    identity (a checksum is now recorded automatically; the script itself is still unversioned) —
    the one remaining gap from the Phase 2 reviews that's a real design decision, not a bug fix.
-2. Review and commit Phase 3 (currently implemented, smoke-tested where possible, but
-   uncommitted).
+2. ~~Review and commit Phase 3~~ — done in a later commit.
 3. Decide how/when to pursue Phase 4 (real Windows/Linux machines or CI) — this session cannot do
    that verification unassisted.
+
+## Phase scope, as of 2026-08-28: Phase 4 vs. a new Phase 5
+
+Phase 3 was fixed and re-verified, and Phase 4 (real Windows/Linux/CI execution) was prepared —
+a GitHub Actions workflow (`.github/workflows/phase4-portability.yml`) exists and is ready to run,
+but has not been triggered yet (no GitHub remote is configured for this repo yet, and the workflow
+is manual-trigger-only by design). See `PHASE_4_EXECUTION_PLAN.md` for the full coverage table.
+
+Separately, real usage surfaced a genuinely different concern: getting Möuseley Kräs's new
+Sheets-write capability (`sheets_overlay.write_new_litters`) working for *other lab members on
+their own machines* — which is not the same problem as "does the launcher script run on Windows."
+It involves distributing (or re-issuing) the service-account credential safely, giving each person
+their own correct `config/pipeline_run.yaml`, and only then does the Windows/Linux launcher
+question even come into play for a *real* second user, not a CI runner.
+
+By explicit agreement, that whole topic — interpersonal/multi-user project sharing, credential and
+config distribution across lab members, and real (not just CI) device/OS compatibility from
+another person's actual machine — is scoped out as **Phase 5**, to be picked up after Phase 4
+(platform-execution verification) is resolved. Phase 4 stays scoped narrowly to "do the existing
+launchers actually work on real Windows/Linux," not "can a second person use this."

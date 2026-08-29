@@ -1,0 +1,194 @@
+name: Phase 4 — Windows/Linux portability verification
+
+# Manual trigger only. This is the first time either project's setup
+# scripts run on a real Windows or Linux machine (GitHub-hosted runners
+# are real machines, not proxies) rather than a bash-on-macOS smoke test.
+# Kept manual (workflow_dispatch) rather than on every push, since this
+# is new and not yet proven not to need iteration, and to avoid spending
+# CI minutes on every commit before that's settled.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  setup-and-tests:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        # Oldest and newest supported Python, not the full 3.11-3.14
+        # matrix - that range was already verified on macOS in Phase 2;
+        # Phase 4's job is proving the *platform*, not repeating the
+        # version matrix.
+        python-version: ["3.11", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+
+      - name: Install required R packages (dplyr, purrr)
+        shell: Rscript {0}
+        run: |
+          install.packages(c("dplyr", "purrr"), repos = "https://cloud.r-project.org")
+
+      - name: Run Möuseley Kräs setup (Linux)
+        if: runner.os == 'Linux'
+        run: bash launchers/linux/AutoMouse_Setup.sh
+
+      - name: Run Xol-Pots-Xol setup (Linux)
+        if: runner.os == 'Linux'
+        run: bash launchers/linux/XolPotsXol_Setup.sh
+
+      - name: Run Möuseley Kräs web launcher smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          bash launchers/linux/AutoMouse_WebApp.sh &
+          server_pid=$!
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:8765/ >/dev/null; then break; fi
+            sleep 0.5
+          done
+          curl -sf http://127.0.0.1:8765/ >/dev/null
+          kill "$server_pid"
+
+      - name: Run Xol-Pots-Xol web launcher smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          bash launchers/linux/XolPotsXol_WebApp.sh &
+          server_pid=$!
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:8766/ >/dev/null; then break; fi
+            sleep 0.5
+          done
+          curl -sf http://127.0.0.1:8766/ >/dev/null
+          kill "$server_pid"
+
+      - name: Run Möuseley Kräs setup (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\launchers\windows\AutoMouse_Setup.ps1
+
+      - name: Run Xol-Pots-Xol setup (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\launchers\windows\XolPotsXol_Setup.ps1
+
+      - name: Run Möuseley Kräs web launcher smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $proc = Start-Process -PassThru -NoNewWindow powershell -ArgumentList "-File .\launchers\windows\AutoMouse_WebApp.ps1"
+          $ok = $false
+          for ($i = 0; $i -lt 20; $i++) {
+            try {
+              Invoke-WebRequest -Uri "http://127.0.0.1:8765/" -UseBasicParsing -TimeoutSec 2 | Out-Null
+              $ok = $true
+              break
+            } catch { Start-Sleep -Milliseconds 500 }
+          }
+          Stop-Process -Id $proc.Id -Force
+          if (-not $ok) { throw "Web app did not respond" }
+
+      - name: Run Xol-Pots-Xol web launcher smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $proc = Start-Process -PassThru -NoNewWindow powershell -ArgumentList "-File .\launchers\windows\XolPotsXol_WebApp.ps1"
+          $ok = $false
+          for ($i = 0; $i -lt 20; $i++) {
+            try {
+              Invoke-WebRequest -Uri "http://127.0.0.1:8766/" -UseBasicParsing -TimeoutSec 2 | Out-Null
+              $ok = $true
+              break
+            } catch { Start-Sleep -Milliseconds 500 }
+          }
+          Stop-Process -Id $proc.Id -Force
+          if (-not $ok) { throw "Web app did not respond" }
+
+  bare-command-selection:
+    name: ${{ matrix.os }} / bare "python"/"py" only (no version suffix)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python (provides the only interpreter on PATH)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+
+      - name: Install required R packages (dplyr, purrr)
+        shell: Rscript {0}
+        run: |
+          install.packages(c("dplyr", "purrr"), repos = "https://cloud.r-project.org")
+
+      # This is the specific scenario codex's and copilot's reviews asked
+      # for: only an unversioned "python3"/"python" or "py" command
+      # available, no "python3.1x" siblings on PATH - the exact case that
+      # exposed the array-slicing bug fixed in commit 012d454.
+      #
+      # SAFETY NOTE (fixed after a real review caught it): an earlier
+      # version of this job did `export PATH="$RUNNER_TEMP/bareshim"` on
+      # its own, wholesale replacing PATH for the setup-script step. That
+      # silently removes bash, mkdir, sleep, cp, and every other coreutil
+      # the setup script itself needs to run - the setup script would fail
+      # for a reason that has nothing to do with Python discovery. The fix
+      # below builds an explicit, complete PATH: the shim directory first
+      # (so "python3"/"python" resolve to it, not to setup-python's
+      # versioned toolcache binary), followed by the standard system
+      # binary directories and R's own bin directory, and this is all done
+      # within ONE step/shell so the exclusion of setup-python's toolcache
+      # directory actually holds for the command that matters.
+      - name: Run both projects' setup with only bare "python3" on PATH (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          real_python="$(command -v python3)"
+          rscript_dir="$(dirname "$(command -v Rscript)")"
+          mkdir -p "$RUNNER_TEMP/bareshim"
+          ln -s "$real_python" "$RUNNER_TEMP/bareshim/python3"
+          ln -s "$real_python" "$RUNNER_TEMP/bareshim/python"
+          export PATH="$RUNNER_TEMP/bareshim:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$rscript_dir"
+          command -v python3.12 && { echo "python3.12 is still reachable; the shim did not hide it" >&2; exit 1; }
+          bash launchers/linux/AutoMouse_Setup.sh
+          bash launchers/linux/XolPotsXol_Setup.sh
+
+      # Same fix on Windows: build $env:Path from the python-only directory
+      # plus the Windows system directories PowerShell itself relies on,
+      # in one step, rather than wholesale-replacing Path across steps.
+      - name: Run both projects' setup with only bare "python"/"py" on PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Deliberately excludes bare $env:SystemRoot (C:\Windows) - the
+          # GitHub-hosted windows-latest image's "py" launcher lives at
+          # C:\Windows\py.exe, and including that directory would defeat
+          # the point of this test. System32 is kept for general Windows
+          # process/DLL-search health; nothing this script calls actually
+          # needs it (every external tool is invoked by a resolved full
+          # path, not a bare name), but it costs nothing to keep.
+          $pyHome = Split-Path -Parent (Get-Command python).Source
+          $env:Path = "$pyHome;$env:SystemRoot\System32"
+          Remove-Item Env:\PY_PYTHON -ErrorAction SilentlyContinue
+          if (Get-Command "py" -ErrorAction SilentlyContinue) {
+            throw "py launcher is still reachable; the PATH override did not hide it"
+          }
+          .\launchers\windows\AutoMouse_Setup.ps1
+          .\launchers\windows\XolPotsXol_Setup.ps1

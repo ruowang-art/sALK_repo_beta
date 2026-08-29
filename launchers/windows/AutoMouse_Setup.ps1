@@ -25,6 +25,28 @@ function Pause-IfInteractive {
     }
 }
 
+# $ErrorActionPreference = "Stop" only turns PowerShell-native errors into
+# terminating ones - it does NOT catch a nonzero exit code from an external
+# native command like python.exe, pip, or a console-script .exe (& automouse
+# --help failing does not throw on its own). Every command whose failure
+# must actually stop this script - not just print an unrelated later error -
+# goes through this helper instead of a bare `&` call, so "completed
+# successfully" at the end of this script is never printed after a step that
+# silently failed.
+function Invoke-RequiredCommand {
+    param(
+        [Parameter(Mandatory)][scriptblock]$Command,
+        [Parameter(Mandatory)][string]$Description
+    )
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "FAILED: $Description (exit code $LASTEXITCODE)."
+        Pause-IfInteractive
+        exit 1
+    }
+}
+
 Write-Host "Möuseley Kräs Windows setup"
 Write-Host "Project: $ProjectDir"
 
@@ -75,7 +97,9 @@ if ($Reset -and (Test-Path ".venv")) {
 }
 
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    & $PythonBin @PythonArgs -m venv .venv
+    Invoke-RequiredCommand -Description "creating the virtual environment" -Command {
+        & $PythonBin @PythonArgs -m venv .venv
+    }
 }
 
 $VenvPython = ".venv\Scripts\python.exe"
@@ -119,7 +143,9 @@ if (Test-Path "requirements.lock.txt") {
 if ($LASTEXITCODE -ne 0) {
     & $VenvPython -m pip install --no-deps "setuptools>=68" | Out-Null
 }
-& $VenvPython -m pip install --no-deps --no-build-isolation -e . | Out-Null
+Invoke-RequiredCommand -Description "installing automouse as an editable package" -Command {
+    & $VenvPython -m pip install --no-deps --no-build-isolation -e . | Out-Null
+}
 
 # The Google Sheet DOB/Wean_By overlay needs these libraries only if it is
 # enabled; skip quietly (with a warning at run time, not a setup failure)
@@ -156,13 +182,24 @@ if ($LASTEXITCODE -ne 0) {
 # scripts/fix_hidden_venv.sh) - that repair is intentionally NOT run here.
 
 Write-Host "Checking Möuseley Kräs directly from this project..."
-& $VenvPython -c "import automouse; print('Möuseley Kräs', automouse.__version__, 'from', automouse.__file__)"
-& ".venv\Scripts\automouse.exe" --help | Out-Null
+Invoke-RequiredCommand -Description "importing automouse from the installed venv" -Command {
+    & $VenvPython -c "import automouse; print('Möuseley Kräs', automouse.__version__, 'from', automouse.__file__)"
+}
+Invoke-RequiredCommand -Description ".venv\Scripts\automouse.exe --help" -Command {
+    & ".venv\Scripts\automouse.exe" --help | Out-Null
+}
 Write-Host "Direct command works: .venv\Scripts\automouse.exe (no PYTHONPATH needed)"
 $env:PYTHONPATH = Join-Path $ProjectDir "src"
-& $VenvPython -m automouse --help | Out-Null
-& $VenvPython -m unittest discover -s tests -v
-Remove-Item Env:\PYTHONPATH
+try {
+    Invoke-RequiredCommand -Description "python -m automouse --help (source-path fallback)" -Command {
+        & $VenvPython -m automouse --help | Out-Null
+    }
+    Invoke-RequiredCommand -Description "the automouse test suite" -Command {
+        & $VenvPython -m unittest discover -s tests -v
+    }
+} finally {
+    Remove-Item Env:\PYTHONPATH
+}
 
 Write-Host ""
 Write-Host "Setup, source-path smoke tests, and workflow tests completed successfully."
