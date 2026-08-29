@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from unittest.mock import patch
 
 from automouse.config import (
@@ -199,7 +199,13 @@ class CrossPlatformRExecutableDiscoveryTests(unittest.TestCase):
             locations = _common_r_executable_locations()
         self.assertTrue(locations)
         for location in locations:
-            self.assertTrue(location.is_absolute())
+            # These candidates represent POSIX paths regardless of the host
+            # actually running this test. pathlib.Path() is host-OS-dependent
+            # (WindowsPath on a Windows runner), so location.is_absolute()
+            # would wrongly report False for e.g. "/opt/homebrew/bin/Rscript"
+            # there (no drive letter) even though it's absolute on macOS.
+            # PurePosixPath gives the platform-independent, correct check.
+            self.assertTrue(PurePosixPath(str(location)).is_absolute())
             self.assertEqual(location.name, "Rscript")
 
     def test_linux_locations_are_absolute_and_named_rscript(self) -> None:
@@ -207,7 +213,9 @@ class CrossPlatformRExecutableDiscoveryTests(unittest.TestCase):
             locations = _common_r_executable_locations()
         self.assertTrue(locations)
         for location in locations:
-            self.assertTrue(location.is_absolute())
+            # See the macOS test above for why PurePosixPath, not
+            # location.is_absolute(), is the correct check here.
+            self.assertTrue(PurePosixPath(str(location)).is_absolute())
             self.assertEqual(location.name, "Rscript")
 
     def test_windows_locations_end_in_rscript_exe(self) -> None:

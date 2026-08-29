@@ -64,9 +64,18 @@ class WebAppTests(unittest.TestCase):
             match = re.search(r'href="(/download/[^"]+)"', body)
             self.assertIsNotNone(match)
             download_response = client.get(match.group(1))
-            self.addCleanup(download_response.close)
-            self.assertEqual(download_response.status_code, 200)
-            self.assertGreater(len(download_response.data), 0)
+            try:
+                self.assertEqual(download_response.status_code, 200)
+                self.assertGreater(len(download_response.data), 0)
+            finally:
+                # Must close before the `with` block above tears down
+                # directory_name: addCleanup would defer this past the end
+                # of the test method, after that teardown already ran. On
+                # Windows, deleting a directory that still has an open file
+                # handle inside it raises PermissionError (WinError 32);
+                # POSIX allows it silently, which is why this was invisible
+                # until a real Windows run (Phase 4) exercised it.
+                download_response.close()
 
     def test_bad_workbook_format_is_a_clear_error_not_a_crash(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:

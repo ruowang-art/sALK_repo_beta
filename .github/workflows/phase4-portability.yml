@@ -49,29 +49,44 @@ jobs:
         if: runner.os == 'Linux'
         run: bash launchers/linux/XolPotsXol_Setup.sh
 
+      # GitHub Actions bash steps run with `set -e` by default, so a bare
+      # `curl -sf ...` that fails aborts the step immediately with curl's own
+      # exit code (7 = "failed to connect") - an earlier version of this
+      # step ran exactly that unconditionally after the retry loop, so a
+      # server that never came up produced a confusing bare "exit code 7"
+      # instead of a clear message. Tracked via an explicit success flag
+      # instead, matching the Windows equivalent below.
       - name: Run Möuseley Kräs web launcher smoke test (Linux)
         if: runner.os == 'Linux'
         run: |
           bash launchers/linux/AutoMouse_WebApp.sh &
           server_pid=$!
+          ok=false
           for i in $(seq 1 20); do
-            if curl -sf http://127.0.0.1:8765/ >/dev/null; then break; fi
+            if curl -sf http://127.0.0.1:8765/ >/dev/null; then ok=true; break; fi
             sleep 0.5
           done
-          curl -sf http://127.0.0.1:8765/ >/dev/null
-          kill "$server_pid"
+          kill "$server_pid" 2>/dev/null || true
+          if [ "$ok" != true ]; then
+            echo "Möuseley Kräs web app did not respond on 127.0.0.1:8765 within the timeout" >&2
+            exit 1
+          fi
 
       - name: Run Xol-Pots-Xol web launcher smoke test (Linux)
         if: runner.os == 'Linux'
         run: |
           bash launchers/linux/XolPotsXol_WebApp.sh &
           server_pid=$!
+          ok=false
           for i in $(seq 1 20); do
-            if curl -sf http://127.0.0.1:8766/ >/dev/null; then break; fi
+            if curl -sf http://127.0.0.1:8766/ >/dev/null; then ok=true; break; fi
             sleep 0.5
           done
-          curl -sf http://127.0.0.1:8766/ >/dev/null
-          kill "$server_pid"
+          kill "$server_pid" 2>/dev/null || true
+          if [ "$ok" != true ]; then
+            echo "Xol-Pots-Xol web app did not respond on 127.0.0.1:8766 within the timeout" >&2
+            exit 1
+          fi
 
       - name: Run Möuseley Kräs setup (Windows)
         if: runner.os == 'Windows'
@@ -157,6 +172,17 @@ jobs:
       # binary directories and R's own bin directory, and this is all done
       # within ONE step/shell so the exclusion of setup-python's toolcache
       # directory actually holds for the command that matters.
+      # An earlier version of this step put the real system directories
+      # (/usr/bin etc.) directly on PATH after the shim. That failed for
+      # real on ubuntu-latest: the "noble" image ships its own versioned
+      # /usr/bin/python3.12 (the OS's system Python, unrelated to
+      # setup-python's toolcache), so having /usr/bin on PATH re-exposed
+      # exactly the versioned sibling this job exists to hide - the self
+      # -check below caught it. Fixed by symlinking every other entry from
+      # those directories into the shim instead of adding the raw
+      # directories to PATH, so coreutils stay reachable but no
+      # python/python3.* binary other than our own explicit python3/python
+      # symlinks does.
       - name: Run both projects' setup with only bare "python3" on PATH (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -165,7 +191,18 @@ jobs:
           mkdir -p "$RUNNER_TEMP/bareshim"
           ln -s "$real_python" "$RUNNER_TEMP/bareshim/python3"
           ln -s "$real_python" "$RUNNER_TEMP/bareshim/python"
-          export PATH="$RUNNER_TEMP/bareshim:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$rscript_dir"
+          for dir in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin; do
+            [ -d "$dir" ] || continue
+            for f in "$dir"/*; do
+              [ -d "$f" ] && continue
+              name="$(basename "$f")"
+              case "$name" in
+                python3.*|python2*|python) continue ;;
+              esac
+              [ -e "$RUNNER_TEMP/bareshim/$name" ] || ln -s "$f" "$RUNNER_TEMP/bareshim/$name"
+            done
+          done
+          export PATH="$RUNNER_TEMP/bareshim:$rscript_dir"
           command -v python3.12 && { echo "python3.12 is still reachable; the shim did not hide it" >&2; exit 1; }
           bash launchers/linux/AutoMouse_Setup.sh
           bash launchers/linux/XolPotsXol_Setup.sh
