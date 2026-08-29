@@ -204,8 +204,11 @@ class CrossPlatformRExecutableDiscoveryTests(unittest.TestCase):
             # (WindowsPath on a Windows runner), so location.is_absolute()
             # would wrongly report False for e.g. "/opt/homebrew/bin/Rscript"
             # there (no drive letter) even though it's absolute on macOS.
-            # PurePosixPath gives the platform-independent, correct check.
-            self.assertTrue(PurePosixPath(str(location)).is_absolute())
+            # str(location) on a WindowsPath renders backslashes, which
+            # PurePosixPath treats as an ordinary character rather than a
+            # separator - as_posix() normalizes back to forward slashes
+            # first, so PurePosixPath sees the same string on every host.
+            self.assertTrue(PurePosixPath(location.as_posix()).is_absolute())
             self.assertEqual(location.name, "Rscript")
 
     def test_linux_locations_are_absolute_and_named_rscript(self) -> None:
@@ -213,9 +216,9 @@ class CrossPlatformRExecutableDiscoveryTests(unittest.TestCase):
             locations = _common_r_executable_locations()
         self.assertTrue(locations)
         for location in locations:
-            # See the macOS test above for why PurePosixPath, not
-            # location.is_absolute(), is the correct check here.
-            self.assertTrue(PurePosixPath(str(location)).is_absolute())
+            # See the macOS test above for why as_posix() before
+            # PurePosixPath, not a bare str() or location.is_absolute().
+            self.assertTrue(PurePosixPath(location.as_posix()).is_absolute())
             self.assertEqual(location.name, "Rscript")
 
     def test_windows_locations_end_in_rscript_exe(self) -> None:

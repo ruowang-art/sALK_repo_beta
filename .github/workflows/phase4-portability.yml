@@ -49,6 +49,29 @@ jobs:
         if: runner.os == 'Linux'
         run: bash launchers/linux/XolPotsXol_Setup.sh
 
+      # `serve` always calls load_config() first, which requires config/
+      # pipeline_run.yaml to exist and its r.executable/translation_script/
+      # wrapper_script to resolve to real files. The real config and R
+      # translation script are deliberately never committed (see .gitignore
+      # and CLAUDE.md) - a fresh checkout, like this CI job, has neither.
+      # inventory/cage_card are optional sections that the web app's index
+      # route never touches, so this throwaway config omits them entirely
+      # and only needs the r.* fields to resolve, reusing the one R script
+      # this repo does ship (its exact content doesn't matter - the smoke
+      # test never triggers a real translation run).
+      - name: Prepare a throwaway config for the web launcher smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cat > config/pipeline_run.yaml <<'EOF'
+          {
+            "r": {
+              "executable": "Rscript",
+              "translation_script": "scripts/transnetyx_cli_wrapper.R",
+              "wrapper_script": "scripts/transnetyx_cli_wrapper.R"
+            }
+          }
+          EOF
+
       # GitHub Actions bash steps run with `set -e` by default, so a bare
       # `curl -sf ...` that fails aborts the step immediately with curl's own
       # exit code (7 = "failed to connect") - an earlier version of this
@@ -97,6 +120,22 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: .\launchers\windows\XolPotsXol_Setup.ps1
+
+      # See the matching Linux step's comment above for why this throwaway
+      # config exists and why it's safe to omit inventory/cage_card.
+      - name: Prepare a throwaway config for the web launcher smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          @'
+          {
+            "r": {
+              "executable": "Rscript",
+              "translation_script": "scripts/transnetyx_cli_wrapper.R",
+              "wrapper_script": "scripts/transnetyx_cli_wrapper.R"
+            }
+          }
+          '@ | Set-Content -Path config\pipeline_run.yaml -Encoding utf8
 
       - name: Run Möuseley Kräs web launcher smoke test (Windows)
         if: runner.os == 'Windows'
