@@ -34,6 +34,15 @@
     <label for="father">Father</label>
     <input type="text" id="father" name="father" required>
   </div>
+  <div class="field">
+    <label for="transnetyx_order_date">Transnetyx Order Date</label>
+    <input type="date" id="transnetyx_order_date" name="transnetyx_order_date" required>
+  </div>
+  <div class="field">
+    <label for="plate_id">Plate ID</label>
+    <input type="text" id="plate_id" name="plate_id" required pattern="T[0-9]{7}" placeholder="e.g. T1234567">
+    <p class="help-text">Format: "T" followed by seven digits (e.g. T1234567).</p>
+  </div>
 
   <fieldset>
     <legend>Pups</legend>

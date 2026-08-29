@@ -67,6 +67,8 @@ def _build_parser() -> argparse.ArgumentParser:
     enter_litter.add_argument("--male-count", type=int, default=0)
     enter_litter.add_argument("--first-mouse-id", required=True)
     enter_litter.add_argument("--last-mouse-id", required=True)
+    enter_litter.add_argument("--plate-id", required=True)
+    enter_litter.add_argument("--transnetyx-order-date", required=True)
     enter_litter.add_argument("--dry-run", action="store_true")
     enter_litter.add_argument("--verbose", action="store_true")
 
@@ -107,8 +109,10 @@ def main(argv: list[str] | None = None) -> int:
                 male_count=args.male_count,
                 first_mouse_id=args.first_mouse_id,
                 last_mouse_id=args.last_mouse_id,
+                plate_id=args.plate_id,
+                transnetyx_order_date=args.transnetyx_order_date,
             )
-            run_id, entries, artifacts = append_litter_to_inventory(
+            run_id, entries, artifacts, warnings = append_litter_to_inventory(
                 submission, config, dry_run=args.dry_run, verbose=args.verbose
             )
             print(
@@ -117,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
                         "run_id": run_id,
                         "artifacts": artifacts,
                         "entries": [entry.to_dict() for entry in entries],
+                        "warnings": warnings,
                     },
                     indent=2,
                     sort_keys=True,

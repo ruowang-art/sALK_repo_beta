@@ -156,6 +156,16 @@ class SheetsOverlayConfig:
     spreadsheet_id: str = ""
     worksheet: str = "Sheet1"
     credentials_file: Path | None = None
+    # Separate, narrower opt-in (requires `enabled: true` as well): lets the
+    # Mouse Inventory Update portal (litter entry) also append new litters to
+    # this same Google Sheet, in addition to the local inventory copy it
+    # always writes. Off by default. Uses a read-write-scoped credential
+    # request distinct from the read-only overlay above, even though both
+    # come from the same service-account key file, so the DOB/Wean_By read
+    # path can never write regardless of what this flag is set to. See
+    # sheets_litter_writer.py and CLAUDE.md for the conflict-checking and
+    # failure-handling rules this is held to.
+    write_new_litters: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -364,6 +374,7 @@ def load_config(path: Path) -> AppConfig:
                 if credentials_file
                 else None
             ),
+            write_new_litters=bool(sheets_overlay_raw.get("write_new_litters", False)),
         )
 
     if errors:
@@ -492,5 +503,11 @@ def validate_config(config: AppConfig) -> None:
                 "service-account key file when enabled: "
                 f"{config.sheets_overlay.credentials_file}"
             )
+    if (
+        config.sheets_overlay is not None
+        and config.sheets_overlay.write_new_litters
+        and not config.sheets_overlay.enabled
+    ):
+        errors.append("sheets_overlay.write_new_litters requires sheets_overlay.enabled = true")
     if errors:
         raise ConfigurationError("Configuration errors:\n- " + "\n- ".join(errors))

@@ -54,7 +54,7 @@ Source code lives in `src/automouse/`; tests in `tests/`; behavior is documented
   (it's a real shared document other lab members may be editing, unlike the local inventory file,
   which Möuseley Kräs always writes to as a brand-new copy) without a further explicit decision from
   the user.
-- The one exception is `sheets_overlay` (`config.py`'s `SheetsOverlayConfig`, implemented in
+- The first exception is `sheets_overlay` (`config.py`'s `SheetsOverlayConfig`, implemented in
   `sheets_overlay.py`): an explicitly opt-in (`enabled: false` by default), read-only
   (`spreadsheets.readonly` scope, service-account credentials) fetch of only DOB and Wean_By from the
   primary Google Sheet, used only to fill *blank* DOB/Wean_By cells in the in-memory inventory table
@@ -65,8 +65,38 @@ Source code lives in `src/automouse/`; tests in `tests/`; behavior is documented
   (offline, bad credentials, renamed sheet/tab) must degrade to a run warning and let the batch
   finish — never fail the run. Sheet columns are located by matching the sheet's header row against
   the same `inventory.expected_headers` text already required of the local CSV, not by position or
-  fuzzy matching. Do not widen this integration's scope (e.g. to genotype, to other fields, to
-  writing back to the sheet) without another explicit decision from the user.
+  fuzzy matching. Do not widen *this* integration's scope (e.g. to genotype, to other fields) without
+  another explicit decision from the user.
+- The second, separate exception is `sheets_overlay.write_new_litters` (`config.py`, default `false`,
+  requires `sheets_overlay.enabled = true` as well — see `validate_config`): lets the Mouse Inventory
+  Update portal below also append newly entered litters to the live Google Sheet, in addition to the
+  local inventory copy it always writes (see `sheets_litter_writer.py` and
+  `app.append_litter_to_inventory`). It requests its own read-write-scoped credential
+  (`https://www.googleapis.com/auth/spreadsheets`) from the same service-account key file, separate
+  from the read-only overlay above, so the DOB/Wean_By read path can never write regardless of this
+  flag. Immediately before appending, it re-fetches the sheet's current identifier column(s) and
+  checks the new litter's mouse IDs against them — a mouse ID that already exists there (e.g. another
+  lab member added it by hand moments earlier) becomes a `CONFLICT` audit entry and is written to
+  neither target. Once this fetch has succeeded for a run, the Sheet — not the local inventory copy —
+  is the source of truth for whether a mouse ID is taken, since the Sheet is the lab's actual primary
+  inventory and the local file is only Möuseley Kräs's own mirror of it: a mouse ID whose row still
+  sits in the local copy but has since been deleted from the Sheet (e.g. because it was entered by
+  mistake and someone removed it there) is *not* a conflict, and re-submitting it replaces that stale
+  local row rather than creating a second one or refusing the submission. This is the one place in
+  the project where an existing local inventory row is ever removed automatically; it only happens
+  for a mouse ID that is part of the litter being submitted right now, only when this feature's Sheet
+  fetch has actually succeeded that run, and it is always paired with re-adding a fresh row for the
+  same ID in the same operation — it is never a bare deletion. When the Sheet can't be reached this
+  run (`write_new_litters` off, or the fetch failed), the local inventory copy remains the only signal,
+  exactly as before, and a mouse ID present there still blocks the submission as a `CONFLICT`. This
+  Sheet-fetch (read-only) now also runs during `--dry-run`, so a preview accurately reflects what a
+  real run would do; a dry run still never writes anywhere regardless of what the fetch finds. Any
+  other failure (network, auth, quota, a missing identifier column) degrades to a run warning — the
+  local inventory write must still succeed independently; the two targets are never coupled such that
+  a Sheet failure blocks or reverts the local write, or vice versa. Requires the service account to
+  have Editor (not just Viewer) access to the sheet. Do not widen *this* integration's scope (e.g. to
+  editing existing rows other than this specific stale-ID replacement, to genotype, to Cage Card
+  Production) without another explicit decision from the user.
 - The webapp (and the CLI) is split into two independent portals — do not blur this boundary:
   - **Cage Card Production** (`/`, and the `run`/`translate` CLI commands): unchanged. `run` always
     does translation, the inventory genotype update, and cage-card generation together as one step;
@@ -83,8 +113,10 @@ Source code lives in `src/automouse/`; tests in `tests/`; behavior is documented
     `InputValidationError`, never silently reconciled. A mouse ID already present in the inventory is
     never overwritten — it becomes an explicit `CONFLICT` audit entry instead, the same as any other
     inventory-safety exception in this project. Requires `inventory.append_only = true`, since every
-    submitted litter is always brand-new rows, never a match against an existing one. This writes
-    only to the local inventory copy, never to the Google Sheet.
+    submitted litter is always brand-new rows, never a match against an existing one. Always writes
+    the local inventory copy; also appends to the live Google Sheet if
+    `sheets_overlay.write_new_litters` is enabled (see the `sheets_overlay.write_new_litters`
+    exception above) — otherwise it writes only to the local inventory copy.
 - `xol-pots-xol/` is a separate, standalone sibling project (its own `pyproject.toml`, `src/`,
   `tests/`, and README), not part of Möuseley Kräs: it consolidates sparse Live Label cage-card
   workbooks that Möuseley Kräs already produced into fuller ones. It only ever reads uploaded

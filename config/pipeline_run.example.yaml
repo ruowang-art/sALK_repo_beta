@@ -44,7 +44,8 @@
       "mouse_id": "Mouse", "strain": "Strain", "cage_id": "Cage",
       "revised_strain": "Revised Strain", "id": "ID", "mother": "Mother",
       "father": "Father", "dob": "DOB", "sex": "Sex",
-      "wean_date": "Wean_By", "sample": "Sample", "genotype": "Genotype"
+      "wean_date": "Wean_By", "sample": "Sample", "genotype": "Genotype",
+      "transnetyx_order_date": "Transnetyx Order Date", "plate_id": "Plate ID"
     },
     "identifier_roles": ["mouse_id", "id", "sample"],
     "known_strains": [
@@ -78,6 +79,7 @@
     "enabled": false,
     "spreadsheet_id": "your-google-sheet-id",
     "worksheet": "Your Worksheet Name",
-    "credentials_file": "/path/to/your/service_account_credentials.json"
+    "credentials_file": "/path/to/your/service_account_credentials.json",
+    "write_new_litters": false
   }
 }

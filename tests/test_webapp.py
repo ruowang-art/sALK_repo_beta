@@ -274,6 +274,8 @@ class WebAppTests(unittest.TestCase):
                     "male_count": "2",
                     "first_mouse_id": "CM2000",
                     "last_mouse_id": "CM2002",
+                    "plate_id": "T1234567",
+                    "transnetyx_order_date": "2026-01-20",
                 },
             )
             self.assertEqual(response.status_code, 200)
@@ -300,6 +302,8 @@ class WebAppTests(unittest.TestCase):
                     "male_count": "2",
                     "first_mouse_id": "CM2000",
                     "last_mouse_id": "CM2002",
+                    "plate_id": "T1234567",
+                    "transnetyx_order_date": "2026-01-20",
                 },
             )
             self.assertEqual(response.status_code, 422)
@@ -323,10 +327,62 @@ class WebAppTests(unittest.TestCase):
                     "male_count": "0",
                     "first_mouse_id": "CM0001",
                     "last_mouse_id": "CM0001",
+                    "plate_id": "T1234567",
+                    "transnetyx_order_date": "2026-01-20",
                 },
             )
             self.assertEqual(response.status_code, 200)
             self.assertIn("CONFLICT", response.get_data(as_text=True))
+
+    def test_inventory_submit_rejects_a_malformed_plate_id(self) -> None:
+        # The browser's HTML pattern is only a UI hint; a direct HTTP request
+        # (bypassing the browser) must be rejected the same way.
+        with tempfile.TemporaryDirectory() as directory_name:
+            config = self._make_config(Path(directory_name), append_only=True)
+            client = create_app(config).test_client()
+
+            response = client.post(
+                "/inventory/submit",
+                data={
+                    "strain": "Kras/Lkb1",
+                    "dob": "2026-01-19",
+                    "mother": "CM9001",
+                    "father": "CM9002",
+                    "total_pups": "1",
+                    "female_count": "1",
+                    "male_count": "0",
+                    "first_mouse_id": "CM2000",
+                    "last_mouse_id": "CM2000",
+                    "plate_id": "PLATE-01",
+                    "transnetyx_order_date": "2026-01-20",
+                },
+            )
+            self.assertEqual(response.status_code, 422)
+            self.assertIn("Plate ID", response.get_data(as_text=True))
+
+    def test_inventory_submit_rejects_a_non_iso_order_date(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            config = self._make_config(Path(directory_name), append_only=True)
+            client = create_app(config).test_client()
+
+            response = client.post(
+                "/inventory/submit",
+                data={
+                    "strain": "Kras/Lkb1",
+                    "dob": "2026-01-19",
+                    "mother": "CM9001",
+                    "father": "CM9002",
+                    "total_pups": "1",
+                    "female_count": "1",
+                    "male_count": "0",
+                    "first_mouse_id": "CM2000",
+                    "last_mouse_id": "CM2000",
+                    "plate_id": "T1234567",
+                    "transnetyx_order_date": "01/20/2026",
+                },
+            )
+            self.assertEqual(response.status_code, 422)
+            self.assertIn("Transnetyx Order Date", response.get_data(as_text=True))
 
 
 if __name__ == "__main__":

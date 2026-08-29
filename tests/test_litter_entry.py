@@ -17,6 +17,8 @@ def _submission(**overrides) -> LitterSubmission:
         male_count=2,
         first_mouse_id="CM1000",
         last_mouse_id="CM1002",
+        plate_id="T1234567",
+        transnetyx_order_date="2026-01-20",
     )
     defaults.update(overrides)
     return LitterSubmission(**defaults)
@@ -93,6 +95,22 @@ class ExpandLitterTests(unittest.TestCase):
     def test_negative_pups_rejected(self) -> None:
         with self.assertRaisesRegex(InputValidationError, "positive"):
             expand_litter(_submission(total_pups=0))
+
+    def test_plate_id_must_be_t_plus_seven_digits(self) -> None:
+        with self.assertRaisesRegex(InputValidationError, "Plate ID"):
+            expand_litter(_submission(plate_id="PLATE-01"))
+        with self.assertRaisesRegex(InputValidationError, "Plate ID"):
+            expand_litter(_submission(plate_id="T123456"))  # only six digits
+        with self.assertRaisesRegex(InputValidationError, "Plate ID"):
+            expand_litter(_submission(plate_id="T12345678"))  # eight digits
+        expand_litter(_submission(plate_id="T1234567"))  # does not raise
+
+    def test_transnetyx_order_date_must_be_iso_format(self) -> None:
+        with self.assertRaisesRegex(InputValidationError, "Transnetyx Order Date"):
+            expand_litter(_submission(transnetyx_order_date="01/20/2026"))
+        with self.assertRaisesRegex(InputValidationError, "Transnetyx Order Date"):
+            expand_litter(_submission(transnetyx_order_date="not a date"))
+        expand_litter(_submission(transnetyx_order_date="2026-01-20"))  # does not raise
 
 
 if __name__ == "__main__":

@@ -14,6 +14,17 @@
 </div>
 {% endif %}
 
+{% if warnings %}
+<div class="panel warning">
+  <p><strong>Warnings:</strong></p>
+  <ul>
+    {% for warning in warnings %}
+    <li>{{ warning }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <table class="counts">
   <caption>What happened to each pup</caption>
   <thead>

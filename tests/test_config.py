@@ -160,6 +160,32 @@ class SheetsOverlayConfigTests(unittest.TestCase):
             )
             validate_config(config)
 
+    def test_write_new_litters_requires_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            root = Path(directory_name)
+            config = self._base_config(
+                root,
+                SheetsOverlayConfig(enabled=False, write_new_litters=True),
+            )
+            with self.assertRaisesRegex(ConfigurationError, "write_new_litters"):
+                validate_config(config)
+
+    def test_write_new_litters_with_enabled_and_valid_settings_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            root = Path(directory_name)
+            credentials_file = root / "service_account.json"
+            credentials_file.write_text("{}", encoding="utf-8")
+            config = self._base_config(
+                root,
+                SheetsOverlayConfig(
+                    enabled=True,
+                    spreadsheet_id="abc123",
+                    credentials_file=credentials_file,
+                    write_new_litters=True,
+                ),
+            )
+            validate_config(config)
+
 
 class CrossPlatformRExecutableDiscoveryTests(unittest.TestCase):
     """Phase 3 (cross-platform launchers): the R-executable fallback logic

@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from automouse.exceptions import InputValidationError
 
 _TRAILING_NUMBER = re.compile(r"^(.*?)(\d+)$")
+_PLATE_ID = re.compile(r"^T\d{7}$")
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 @dataclass(slots=True)
@@ -30,6 +32,8 @@ class LitterSubmission:
     male_count: int
     first_mouse_id: str
     last_mouse_id: str
+    plate_id: str
+    transnetyx_order_date: str
 
 
 @dataclass(slots=True)
@@ -52,7 +56,10 @@ def expand_litter(submission: LitterSubmission) -> list[LitterMouse]:
     """Validate one litter submission and expand it into one (mouse_id,
     sex) entry per pup, females first. Raises :class:`InputValidationError`
     on any inconsistency between the pup counts, the sex counts, and the
-    mouse ID range — nothing here is ever guessed or silently reconciled.
+    mouse ID range, or on a Plate ID/Transnetyx Order Date that doesn't
+    match the required format — nothing here is ever guessed or silently
+    reconciled. This is the one validation funnel shared by the CLI and the
+    web form, so the two can never enforce different contracts.
     """
     if submission.total_pups <= 0:
         raise InputValidationError("Number of pups must be a positive number.")
@@ -66,6 +73,16 @@ def expand_litter(submission: LitterSubmission) -> list[LitterMouse]:
             f"({submission.female_count} + {submission.male_count} = "
             f"{submission.female_count + submission.male_count}) does not equal "
             f"the number of pups ({submission.total_pups})."
+        )
+    if not _PLATE_ID.match(submission.plate_id.strip()):
+        raise InputValidationError(
+            f"Plate ID {submission.plate_id!r} must be 'T' followed by seven digits "
+            "(e.g. T1234567)."
+        )
+    if not _ISO_DATE.match(submission.transnetyx_order_date.strip()):
+        raise InputValidationError(
+            f"Transnetyx Order Date {submission.transnetyx_order_date!r} must be a date in "
+            "YYYY-MM-DD format."
         )
 
     first_prefix, first_number = _split_trailing_number(submission.first_mouse_id, "First mouse ID")

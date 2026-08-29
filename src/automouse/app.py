@@ -32,7 +32,7 @@ from automouse.inventory_manager import (
     save_updated_inventory,
     write_audit_csv,
 )
-from automouse.litter_entry import LitterSubmission, expand_litter
+from automouse.litter_entry import LitterMouse, LitterSubmission, expand_litter
 from automouse.logging_setup import configure_run_logging
 from automouse.models import (
     AuditAction,
@@ -47,6 +47,12 @@ from automouse.models import (
 )
 from automouse.paths import RuntimePaths, initialize_runtime_directories
 from automouse.sheets_overlay import SheetsOverlayError, apply_dob_wean_overlay, fetch_dob_wean_overlay
+from automouse.sheets_litter_writer import (
+    SheetsLitterWriteError,
+    SheetState,
+    append_litter_rows_to_sheet,
+    fetch_sheet_state,
+)
 from automouse.r_runner import run_r_translation
 from automouse.record_matcher import apply_inventory_updates
 from automouse.summary import write_run_summary, write_translation_validation
@@ -713,6 +719,24 @@ def _complete_inventory_and_cage_card_pipeline(
     )
 
 
+def _litter_role_values(submission: LitterSubmission, mouse_id: str, sex: str) -> dict[str, str]:
+    """The one shared mapping of litter-entry fields to inventory roles,
+    used both for the local inventory row and (if enabled) the row appended
+    to the live Google Sheet — so the two targets can never drift apart.
+    """
+    return {
+        "mouse_id": mouse_id,
+        "strain": submission.strain,
+        "revised_strain": submission.strain,
+        "mother": submission.mother,
+        "father": submission.father,
+        "dob": submission.dob,
+        "sex": sex,
+        "plate_id": submission.plate_id,
+        "transnetyx_order_date": submission.transnetyx_order_date,
+    }
+
+
 def _append_litter_mouse_row(
     inventory: InventoryTable,
     submission: LitterSubmission,
@@ -724,15 +748,7 @@ def _append_litter_mouse_row(
     run_id: str,
 ) -> int:
     row = [""] * len(inventory.headers)
-    for role, value in (
-        ("mouse_id", mouse_id),
-        ("strain", submission.strain),
-        ("revised_strain", submission.strain),
-        ("mother", submission.mother),
-        ("father", submission.father),
-        ("dob", submission.dob),
-        ("sex", sex),
-    ):
+    for role, value in _litter_role_values(submission, mouse_id, sex).items():
         if role in inventory.config.columns:
             row[inventory.config.column_index(role)] = value
     row[audit_columns["last_updated"]] = timestamp
@@ -748,18 +764,31 @@ def append_litter_to_inventory(
     *,
     dry_run: bool = False,
     verbose: bool = False,
-) -> tuple[str, list[AuditEntry], dict[str, str]]:
+) -> tuple[str, list[AuditEntry], dict[str, str], list[str]]:
     """Expand one litter submission into individual pup rows and append
     them to the inventory as brand-new mice.
 
     Every pup gets an explicit audit outcome, written to its own audit CSV.
-    A pup whose mouse ID already exists in the inventory is never
-    overwritten — it becomes an explicit ``CONFLICT`` audit entry instead,
-    the same as any other inventory-safety exception in this project.
-    Genotype is deliberately left blank: litters are entered before
-    Transnetyx genotyping, which fills genotype in later via the normal
-    ``run`` pipeline. Returns the run id, the audit entries, and the
-    artifact paths written (empty on a dry run or if nothing was added).
+    A pup whose mouse ID already exists is never overwritten; it becomes an
+    explicit ``CONFLICT`` audit entry instead, the same as any other
+    inventory-safety exception in this project. Genotype is deliberately
+    left blank: litters are entered before Transnetyx genotyping, which
+    fills genotype in later via the normal ``run`` pipeline. Returns the run
+    id, the audit entries, the artifact paths written (empty on a dry run or
+    if nothing was added), and any warnings (e.g. the Sheet write was
+    skipped or failed, but the local inventory copy was still updated).
+
+    Conflict source of truth: whenever ``sheets_overlay.write_new_litters``
+    is enabled and the live Google Sheet was reachable this run, the Sheet
+    — not the local copy — decides whether a mouse ID is still taken, since
+    it is the lab's actual primary inventory and the local file is only
+    Möuseley Kräs's own mirror of it. A mouse ID whose row still sits in the
+    local copy but has since been deleted from the Sheet is therefore no
+    longer a conflict; its stale local row is removed and replaced by the
+    freshly submitted one, so the local file doesn't end up with two rows
+    for the same ID. Without a working view of the Sheet this run (the
+    integration is off, or the fetch failed), the local inventory remains
+    the only signal, exactly as it always has been.
     """
     if config.inventory is None:
         raise ConfigurationError(
@@ -788,18 +817,131 @@ def append_litter_to_inventory(
     audit_columns = ensure_audit_columns(inventory)
     primary_index = inventory.primary_index()
 
+    warnings: list[str] = []
+    write_to_sheet = bool(
+        config.sheets_overlay is not None
+        and config.sheets_overlay.enabled
+        and config.sheets_overlay.write_new_litters
+    )
+    sheet_unavailable_suffix = (
+        "this preview reflects the local inventory copy only."
+        if dry_run
+        else "this litter was added to the local inventory copy only, not to "
+        "the Sheet. Add it to the Sheet by hand, or re-run once the Sheet is "
+        "reachable."
+    )
+    sheet_state: SheetState | None = None
+    if write_to_sheet:
+        # Fetched for a dry run too (read-only) so the preview accurately
+        # reflects which mouse IDs the Sheet — not just the local copy —
+        # currently considers taken; a dry run never writes regardless.
+        try:
+            sheet_state = fetch_sheet_state(config.sheets_overlay, config.inventory)
+        except SheetsLitterWriteError as error:
+            logger.warning("Google Sheet conflict check skipped: %s", error)
+            warnings.append(
+                f"Could not check the Google Sheet for conflicts ({error}); "
+                + sheet_unavailable_suffix
+            )
+            write_to_sheet = False
+
+        # A successful fetch is not proof the response is complete: a wrong
+        # tab, a misconfigured range, or a transient API hiccup that still
+        # returns HTTP 200 could come back nearly empty. Trusting that as
+        # "these mouse IDs don't exist" would wrongly treat real, still-active
+        # local rows as freed for replacement below. Half of what the local
+        # inventory already knows is a conservative, non-arbitrary floor — it
+        # needs no separately configured expected count, only that the
+        # Sheet's view isn't drastically smaller than Möuseley Kräs's own.
+        if sheet_state is not None:
+            local_identifier_count = len(primary_index)
+            fetched_count = len(sheet_state.existing_identifiers)
+            if local_identifier_count > 0 and fetched_count < local_identifier_count * 0.5:
+                logger.warning(
+                    "Google Sheet conflict check distrusted: it reported only %d "
+                    "identifier(s), well under the %d this local inventory already has.",
+                    fetched_count,
+                    local_identifier_count,
+                )
+                warnings.append(
+                    f"The Google Sheet returned only {fetched_count} mouse ID(s), far fewer "
+                    f"than the {local_identifier_count} the local inventory already has — this "
+                    "looks like an incomplete or wrong Sheet response (wrong tab, wrong range, "
+                    "or a temporary error), so it was not trusted for conflict-checking; "
+                    + sheet_unavailable_suffix
+                )
+                sheet_state = None
+                write_to_sheet = False
+    sheet_conflict_ids = sheet_state.existing_identifiers if sheet_state else set()
+    # Once the Sheet has been fetched successfully this run, it — not the
+    # local copy — decides whether a mouse ID is taken (see docstring).
+    sheet_is_authoritative = sheet_state is not None
+
+    # Pass 1: classify every pup against the *pristine* pre-batch state.
+    # Nothing is mutated here, so these classifications stay valid even
+    # though pass 2 below removes rows out from under `primary_index`.
+    decisions: list[tuple[int, LitterMouse, bool, bool]] = []
+    freed_row_indices: set[int] = set()
+    for source_row, mouse in enumerate(mice, start=1):
+        in_local_inventory = mouse.mouse_id in primary_index
+        in_sheet = mouse.mouse_id in sheet_conflict_ids
+        conflict = in_sheet if sheet_is_authoritative else in_local_inventory
+        is_freed = (not conflict) and sheet_is_authoritative and in_local_inventory and not in_sheet
+        if is_freed:
+            freed_row_indices.update(primary_index[mouse.mouse_id])
+        decisions.append((source_row, mouse, conflict, is_freed))
+
+    # Pass 2: remove stale local rows for freed mouse IDs before appending
+    # anything, so every row index computed below is already final. A dry
+    # run never mutates the inventory, so this is skipped there — pass 3's
+    # dry-run messages describe what *would* be removed instead.
+    freed_mouse_ids = [mouse.mouse_id for _, mouse, conflict, is_freed in decisions if is_freed]
+    # A human-readable snapshot of each stale row's prior values, captured
+    # before deletion, so the audit trail carries a recoverable trace of what
+    # was removed rather than just the fact that something was. The full row
+    # is also always recoverable from the pre-run backup written above.
+    snapshot_roles = [
+        role
+        for role in ("strain", "mother", "father", "dob", "sex", "plate_id", "transnetyx_order_date")
+        if role in inventory.config.columns
+    ]
+    freed_snapshots: dict[str, str] = {
+        mouse_id: "; ".join(
+            f"{role}={inventory.value(primary_index[mouse_id][0], role)}" for role in snapshot_roles
+        )
+        for mouse_id in freed_mouse_ids
+    }
+    if not dry_run and freed_row_indices:
+        inventory.rows = [
+            row for index, row in enumerate(inventory.rows) if index not in freed_row_indices
+        ]
+        primary_index = inventory.primary_index()
+        logger.info(
+            "Removed %d stale local row(s) for mouse ID(s) no longer in the Google Sheet: %s",
+            len(freed_row_indices),
+            ", ".join(freed_mouse_ids),
+        )
+        warnings.append(
+            "Replaced the local inventory's previous entry for "
+            f"{', '.join(freed_mouse_ids)} because it had been removed from the Google Sheet. "
+            f"The removed row(s)' prior values are preserved in the pre-run backup: {backup_path} "
+            "(recovery: restore that file, or copy the affected row(s) back by hand)."
+        )
+
+    # Pass 3: build audit entries and, for a real run, append the new rows.
     timestamp = datetime.now(timezone.utc).isoformat()
     entries: list[AuditEntry] = []
     added_mouse_ids: list[str] = []
-    for source_row, mouse in enumerate(mice, start=1):
-        if mouse.mouse_id in primary_index:
+    for source_row, mouse, conflict, is_freed in decisions:
+        if conflict:
+            where = "the Google Sheet" if sheet_is_authoritative else "the local inventory"
             entries.append(
                 AuditEntry(
                     run_id=run_id,
                     timestamp=timestamp,
                     sample_id=mouse.mouse_id,
                     mouse_id=mouse.mouse_id,
-                    inventory_row=primary_index[mouse.mouse_id][0],
+                    inventory_row=(primary_index[mouse.mouse_id][0] if mouse.mouse_id in primary_index else None),
                     previous_genotype=None,
                     proposed_genotype=None,
                     final_genotype=None,
@@ -808,12 +950,20 @@ def append_litter_to_inventory(
                     source_file="litter_entry",
                     source_row=source_row,
                     messages=[
-                        f"{mouse.mouse_id} already exists in the inventory; "
+                        f"{mouse.mouse_id} already exists in {where}; "
                         "this litter submission was not applied to it."
                     ],
                 )
             )
             continue
+
+        freed_note = (
+            " Replaced a previous entry for this mouse ID that had been removed from the "
+            f"Google Sheet (its prior values were: {freed_snapshots.get(mouse.mouse_id, 'n/a')}; "
+            f"the full row remains recoverable from the pre-run backup: {backup_path})."
+            if is_freed
+            else ""
+        )
         if dry_run:
             entries.append(
                 AuditEntry(
@@ -829,7 +979,18 @@ def append_litter_to_inventory(
                     status=RecordStatus.MANUAL_REVIEW,
                     source_file="litter_entry",
                     source_row=source_row,
-                    messages=["Would be added (dry run; nothing was written)."],
+                    messages=[
+                        "Would be added (dry run; nothing was written). "
+                        f"Transnetyx Order Date={submission.transnetyx_order_date}; "
+                        f"Plate ID={submission.plate_id}."
+                        + (
+                            " Would replace a previous entry for this mouse ID that has been "
+                            f"removed from the Google Sheet (its prior values are: "
+                            f"{freed_snapshots.get(mouse.mouse_id, 'n/a')})."
+                            if is_freed
+                            else ""
+                        )
+                    ],
                 )
             )
             continue
@@ -860,7 +1021,8 @@ def append_litter_to_inventory(
                 source_row=source_row,
                 messages=[
                     f"Added from litter entry ({mouse.sex}; strain={submission.strain}; "
-                    f"DOB={submission.dob})."
+                    f"DOB={submission.dob}; Transnetyx Order Date={submission.transnetyx_order_date}; "
+                    f"Plate ID={submission.plate_id})." + freed_note
                 ],
             )
         )
@@ -887,6 +1049,29 @@ def append_litter_to_inventory(
         logger.info("Copied rebuilt inventory back to %s", config.inventory.file)
         artifacts["updated_inventory_csv_file"] = str(inventory_csv_path)
         artifacts["updated_inventory_file"] = str(inventory_xlsx_path)
+
+        if write_to_sheet and sheet_state is not None:
+            added_mice_by_id = {mouse.mouse_id: mouse for mouse in mice if mouse.mouse_id in added_mouse_ids}
+            sheet_rows = [
+                _litter_role_values(submission, mouse_id, added_mice_by_id[mouse_id].sex)
+                for mouse_id in added_mouse_ids
+            ]
+            try:
+                append_litter_rows_to_sheet(
+                    config.sheets_overlay, config.inventory, sheet_state, sheet_rows
+                )
+                logger.info(
+                    "Appended %d new litter row(s) to the Google Sheet.", len(sheet_rows)
+                )
+            except SheetsLitterWriteError as error:
+                logger.warning("Could not append new litters to the Google Sheet: %s", error)
+                warnings.append(
+                    "Added to the local inventory copy, but the write to the Google Sheet "
+                    f"did not confirm success ({error}). This does not necessarily mean nothing "
+                    "was written — a network or timeout error can occur after Google has already "
+                    "received the rows. Check the Sheet for these mouse IDs before adding them "
+                    "by hand, to avoid creating duplicate rows: " + ", ".join(added_mouse_ids)
+                )
     logging.shutdown()
-    return run_id, entries, artifacts
+    return run_id, entries, artifacts, warnings
 

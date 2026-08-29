@@ -254,6 +254,12 @@ def create_app(config: AppConfig) -> Flask:
             except ValueError:
                 raise AutoMouseError(f"{name.replace('_', ' ').title()} must be a whole number.")
 
+        def _required_field(name: str, label: str) -> str:
+            value = (form.get(name) or "").strip()
+            if not value:
+                raise AutoMouseError(f"{label} is required.")
+            return value
+
         try:
             total_pups = _int_field("total_pups")
             female_count = _int_field("female_count") if form.get("female_count") else 0
@@ -268,9 +274,13 @@ def create_app(config: AppConfig) -> Flask:
                 male_count=male_count,
                 first_mouse_id=(form.get("first_mouse_id") or "").strip(),
                 last_mouse_id=(form.get("last_mouse_id") or "").strip(),
+                plate_id=_required_field("plate_id", "Plate ID"),
+                transnetyx_order_date=_required_field(
+                    "transnetyx_order_date", "Transnetyx Order Date"
+                ),
             )
             dry_run = form.get("dry_run") == "on"
-            run_id, entries, artifacts = append_litter_to_inventory(
+            run_id, entries, artifacts, warnings = append_litter_to_inventory(
                 submission, config, dry_run=dry_run
             )
         except AutoMouseError as error:
@@ -282,6 +292,7 @@ def create_app(config: AppConfig) -> Flask:
             entries=entries,
             dry_run=dry_run,
             downloads=_download_links(artifacts, config),
+            warnings=warnings,
         )
 
     return app

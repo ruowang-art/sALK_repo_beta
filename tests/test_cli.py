@@ -141,6 +141,7 @@ class CliEnterLitterTests(unittest.TestCase):
                         "--mother", "CM9001", "--father", "CM9002",
                         "--total-pups", "3", "--female-count", "1", "--male-count", "2",
                         "--first-mouse-id", "CM1000", "--last-mouse-id", "CM1002",
+                        "--plate-id", "T1234567", "--transnetyx-order-date", "2026-01-20",
                     ]
                 )
             self.assertEqual(status, 0)
@@ -166,6 +167,7 @@ class CliEnterLitterTests(unittest.TestCase):
                         "--mother", "CM9001", "--father", "CM9002",
                         "--total-pups", "5", "--female-count", "1", "--male-count", "2",
                         "--first-mouse-id", "CM1000", "--last-mouse-id", "CM1002",
+                        "--plate-id", "T1234567", "--transnetyx-order-date", "2026-01-20",
                     ]
                 )
             self.assertEqual(status, 1)
@@ -185,6 +187,7 @@ class CliEnterLitterTests(unittest.TestCase):
                         "--mother", "CM9001", "--father", "CM9002",
                         "--total-pups", "1", "--female-count", "1", "--male-count", "0",
                         "--first-mouse-id", "CM1000", "--last-mouse-id", "CM1000",
+                        "--plate-id", "T1234567", "--transnetyx-order-date", "2026-01-20",
                     ]
                 )
             self.assertEqual(status, 1)

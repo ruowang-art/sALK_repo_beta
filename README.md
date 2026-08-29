@@ -93,9 +93,11 @@ command. Equivalent to `automouse --config config/pipeline_run.yaml serve` (`--p
 `--no-browser` are also available).
 
 If `inventory.source_sheet_url` is set in the config, every page shows a link to open the primary
-inventory (e.g. a Google Sheet) in a new tab. This is a convenience link only — Möuseley Kräs does not
-read from or write to that sheet automatically; it still works from a manually exported/imported CSV
-as described above.
+inventory (e.g. a Google Sheet) in a new tab. By default this is a convenience link only — Möuseley
+Kräs does not read from or write to that sheet automatically, and it still works from a manually
+exported/imported CSV as described above. Two narrow, explicitly opt-in exceptions exist and are
+disabled by default: a read-only DOB/Wean_By overlay, and a Sheet write-back for newly entered
+litters — see the two sections below.
 
 ## Google Sheet DOB/Wean_By overlay (optional)
 
@@ -183,9 +185,12 @@ The web app (see above) is split into two independent portals, and the CLI mirro
   and produces Live Label cage cards.
 - **Mouse Inventory Update** (`/inventory`, or the `enter-litter` CLI command) — records one litter
   by hand, right after birth and before any genotyping: strain, date of birth, mother, father, a
-  female/male pup count, and the first and last mouse ID assigned to the litter. Möuseley Kräs adds
-  one new inventory row per pup — genotype is deliberately left blank, to be filled in later by Cage
-  Card Production once Transnetyx results come back for these mice.
+  female/male pup count, the first and last mouse ID assigned to the litter, a Plate ID, and a
+  Transnetyx Order Date. Möuseley Kräs adds one new inventory row per pup — genotype is deliberately
+  left blank, to be filled in later by Cage Card Production once Transnetyx results come back for
+  these mice. If `sheets_overlay.write_new_litters` is enabled, it also appends the new litter to the
+  live Google Sheet (see [Google Sheet litter write-back](#google-sheet-litter-write-back-optional)
+  below); otherwise it writes only the local inventory copy.
 
 ### Entering a litter from the command line
 
@@ -195,15 +200,57 @@ The web app (see above) is split into two independent portals, and the CLI mirro
   --strain "Kras/Lkb1/Tom/Cas9" --dob 2026-01-19 \
   --mother CM9001 --father CM9002 \
   --total-pups 13 --female-count 6 --male-count 7 \
-  --first-mouse-id CM12000 --last-mouse-id CM12012
+  --first-mouse-id CM12000 --last-mouse-id CM12012 \
+  --plate-id T1234567 --transnetyx-order-date 2026-01-19
 ```
 
 Females always take the earliest mouse IDs in the range, males the rest — in this example
 `CM12000`-`CM12005` are female and `CM12006`-`CM12012` are male. The number of pups, the
-female/male counts, and the size of the mouse ID range must all agree; any mismatch is reported as
-an explicit error, never silently reconciled. A mouse ID that already exists in the inventory is
-never overwritten — it becomes an explicit conflict in the result instead. `enter-litter` requires
-`inventory.append_only: true`, since every submitted litter is always brand-new mice.
+female/male counts, and the size of the mouse ID range must all agree; Plate ID must be `T` followed
+by seven digits, and Transnetyx Order Date must be `YYYY-MM-DD`; any mismatch is reported as an
+explicit error, never silently reconciled. `enter-litter` requires `inventory.append_only: true`,
+since every submitted litter is always brand-new mice.
+
+A mouse ID that already exists is never overwritten — it becomes an explicit conflict in the result
+instead. If Sheet write-back is enabled and reachable, the live Sheet decides what counts as
+"already exists" (see below); otherwise the local inventory copy alone does, exactly as always.
+
+## Google Sheet litter write-back (optional)
+
+This is a separate, narrower opt-in from the read-only DOB/Wean_By overlay above — it only affects
+the Mouse Inventory Update portal, and it can write to the Sheet, not just read from it.
+
+When enabled, submitting a litter also appends it to the live Google Sheet, in addition to the local
+inventory copy (which is always written). Scope and safety:
+
+- Opt-in and layered: requires both `sheets_overlay.enabled: true` and
+  `sheets_overlay.write_new_litters: true`. It requests its own read-write-scoped credential
+  (`https://www.googleapis.com/auth/spreadsheets`) separately from the read-only overlay's
+  `spreadsheets.readonly` scope, so the DOB/Wean_By read path can never write regardless of this flag.
+- Requires the service account to have **Editor** (not just Viewer) access to the sheet.
+- Conflict detection re-fetches the Sheet's current identifiers immediately before writing, since
+  another lab member may be editing it concurrently. Once that fetch succeeds, the Sheet — not the
+  local inventory copy — decides whether a mouse ID is already taken, since the Sheet is the lab's
+  actual primary inventory and the local file is only Möuseley Kräs's mirror of it. A mouse ID whose
+  row still sits in the local copy but has since been deleted from the Sheet is therefore not a
+  conflict: the stale local row is replaced by the freshly submitted one, rather than blocking the
+  submission or creating a duplicate. This is the only place in the project where an existing local
+  inventory row is ever removed automatically, and it only happens paired with immediately re-adding
+  a fresh row for that same mouse ID; the removed row's prior values are always named in the audit
+  trail and recoverable from that run's inventory backup.
+- If the Sheet fetch fails, or comes back with far fewer identifiers than the local inventory already
+  has (a strong sign of a wrong tab, a bad range, or a masked API error), the Sheet is not trusted for
+  that run: the local inventory copy remains the only signal, exactly as when this feature is off,
+  and the run degrades to a warning rather than failing.
+- `--dry-run` fetches the Sheet too (read-only) so its preview matches what a real run would do; it
+  never writes anywhere regardless of what the fetch finds.
+- Any other failure (network, auth, quota) degrades to a run warning — the local inventory write
+  always succeeds independently of whether the Sheet write does.
+
+See `CLAUDE.md` and `Markdown_files/SHEETS_WRITE_ARCHITECTURE_DECISION.md` for the full design
+record, including accepted risks (the conflict check and the write are two separate requests, so a
+race between them is possible in principle) and what has and hasn't been verified against a real
+Sheet.
 
 ## Safety behavior
 
